@@ -1,0 +1,15 @@
+# dependências
+node_modules/
+
+# banco SQLite local (recriado no primeiro `npm run dev`)
+mvp-matematica/backend/data/
+
+# builds
+dist/
+.vite/
+
+# pacotes gerados localmente
+*.zip
+
+# temporários do Word
+~$*.docx

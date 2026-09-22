@@ -1,0 +1,288 @@
+:root {
+  --azul: #2f6fed;
+  --azul-claro: #eaf1ff;
+  --verde: #2e9e5b;
+  --vermelho: #d94c4c;
+  --texto: #1f2933;
+  --cinza: #6b7280;
+  --borda: #dfe3e8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: var(--texto);
+  background: #f7f9fc;
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--borda);
+}
+
+.nav-marca {
+  font-weight: 700;
+}
+
+.nav-links a {
+  margin-left: 16px;
+  text-decoration: none;
+  color: var(--cinza);
+  font-weight: 600;
+}
+
+.nav-links a.active {
+  color: var(--azul);
+}
+
+.tela {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.tela.larga {
+  max-width: 1000px;
+}
+
+/* ---------- tela do aluno ---------- */
+
+.titulo-grande {
+  font-size: 34px;
+  text-align: center;
+}
+
+.lista-alunos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.cartao-aluno {
+  font-size: 24px;
+  font-weight: 700;
+  padding: 24px 36px;
+  border: 2px solid var(--azul);
+  background: #fff;
+  color: var(--azul);
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.cartao-aluno:hover {
+  background: var(--azul-claro);
+}
+
+.cabecalho-aluno {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.link {
+  background: none;
+  border: none;
+  color: var(--cinza);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.cartao-questao {
+  background: #fff;
+  border-radius: 20px;
+  padding: 36px 28px;
+  box-shadow: 0 2px 10px rgba(31, 41, 51, 0.08);
+  text-align: center;
+}
+
+.enunciado {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0 0 28px;
+}
+
+.alternativas {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.alternativa {
+  font-size: 28px;
+  font-weight: 700;
+  padding: 20px;
+  border-radius: 14px;
+  border: 2px solid var(--borda);
+  background: #fff;
+  cursor: pointer;
+}
+
+.alternativa:hover:enabled {
+  border-color: var(--azul);
+  background: var(--azul-claro);
+}
+
+.alternativa.certa {
+  border-color: var(--verde);
+  background: #e7f7ed;
+}
+
+.alternativa.errada {
+  border-color: var(--vermelho);
+  background: #fdeaea;
+}
+
+.alternativa.apagada {
+  opacity: 0.45;
+}
+
+.feedback {
+  margin-top: 26px;
+}
+
+.feedback-texto {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.feedback.ok .feedback-texto {
+  color: var(--verde);
+}
+
+.feedback.nao .feedback-texto {
+  color: var(--vermelho);
+}
+
+.botao-principal {
+  font-size: 20px;
+  font-weight: 700;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  background: var(--azul);
+  color: #fff;
+  cursor: pointer;
+}
+
+.explicacao {
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--cinza);
+  background: #fff;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.explicacao summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.mini-dominio {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+/* ---------- painel do professor ---------- */
+
+.form-senha {
+  display: flex;
+  gap: 10px;
+}
+
+.form-senha input {
+  flex: 1;
+  font-size: 16px;
+  padding: 12px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+}
+
+.cartao-professor {
+  background: #fff;
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.cartao-professor h2 {
+  margin-top: 0;
+}
+
+.barra-linha {
+  display: grid;
+  grid-template-columns: 220px 1fr 48px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.barra-trilho {
+  height: 14px;
+  background: #eef1f5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.barra-preenchida {
+  height: 100%;
+  background: var(--azul);
+  transition: width 0.4s ease;
+}
+
+.barra-preenchida.dominada {
+  background: var(--verde);
+}
+
+.barra-valor {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabela th,
+.tabela td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--borda);
+}
+
+.acerto {
+  color: var(--verde);
+}
+
+.erro-celula {
+  color: var(--vermelho);
+}
+
+.nota {
+  color: var(--cinza);
+  font-size: 14px;
+}
+
+.erro {
+  color: var(--vermelho);
+  font-weight: 600;
+}
