@@ -33,6 +33,32 @@ cd backend
 npm test
 ```
 
+## Publicar a interface na Vercel (opcional)
+
+O backend usa SQLite em arquivo, então **ele não roda na Vercel** (o filesystem das
+Functions é efêmero). O arranjo possível é: interface na Vercel, API na sua máquina.
+
+Na Vercel, ao importar o repositório, defina:
+
+- **Root Directory:** `mvp-matematica/frontend` (sem isso o deploy dá 404, porque a
+  raiz do repositório não é um app)
+- **Environment Variable:** `VITE_API_URL` com a URL pública da sua API
+
+Para a API da sua máquina ganhar uma URL pública HTTPS, use um túnel — com o
+backend já rodando em `npm run dev`:
+
+```bash
+npx cloudflared tunnel --url http://localhost:3001
+```
+
+Copie a URL `https://....trycloudflare.com` que ele imprime para `VITE_API_URL` e
+refaça o deploy. A demo fica no ar enquanto o seu computador e o túnel estiverem
+ligados. Apontar `VITE_API_URL` para `http://localhost:3001` também funciona, mas
+só no próprio computador que roda o backend.
+
+Antes de expor a API, troque a senha do painel: `SENHA_PROFESSOR=algumacoisa`. Os
+dados são de alunos fictícios — não use dados reais de crianças nesta demo.
+
 ## Como funciona a personalização
 
 Para cada par (aluno, habilidade) guardamos um único número, **P(L)**: a
