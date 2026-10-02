@@ -10,6 +10,12 @@ async function json(resposta) {
     const corpo = await resposta.json().catch(() => ({}));
     throw new Error(corpo.erro || `Erro ${resposta.status}`);
   }
+  // Na Vercel sem VITE_API_URL, /api/... cai no rewrite da SPA e volta o index.html.
+  if (!resposta.headers.get('content-type')?.includes('application/json')) {
+    throw new Error(
+      'A API não respondeu JSON. Em produção, configure VITE_API_URL com a URL do backend',
+    );
+  }
   return resposta.json();
 }
 

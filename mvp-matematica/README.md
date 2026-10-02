@@ -45,6 +45,11 @@ Na Vercel, ao importar o repositório, defina:
   raiz do repositório não é um app)
 - **Environment Variable:** `VITE_API_URL` com a URL pública da sua API
 
+O resto (framework Vite, `npm run build`, saída em `dist` e o rewrite da SPA) já está em
+`frontend/vercel.json`. Salve esse arquivo **sem BOM**: a Vercel recusa um `vercel.json` com BOM
+como inválido. Sem `VITE_API_URL`, a interface abre, mas mostra o aviso de que a API não
+respondeu JSON.
+
 Para a API da sua máquina ganhar uma URL pública HTTPS, use um túnel — com o
 backend já rodando em `npm run dev`:
 

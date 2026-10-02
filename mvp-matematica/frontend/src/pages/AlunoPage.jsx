@@ -74,7 +74,8 @@ export default function AlunoPage() {
     return (
       <main className="tela">
         <p className="erro">
-          {erro} — o backend está rodando em <code>http://localhost:3001</code>?
+          {erro} — o backend está rodando e acessível
+          {import.meta.env.VITE_API_URL ? ` em ${import.meta.env.VITE_API_URL}` : ''}?
         </p>
         <button className="link" onClick={() => setErro(null)}>
           tentar de novo
