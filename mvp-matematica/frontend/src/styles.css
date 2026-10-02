@@ -286,3 +286,103 @@ body {
   color: var(--vermelho);
   font-weight: 600;
 }
+
+/* ---------- diagnóstico, dica e alertas ---------- */
+
+.form-novo-aluno {
+  display: flex;
+  gap: 10px;
+  max-width: 460px;
+  margin: 32px auto 0;
+}
+
+.form-novo-aluno input {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  padding: 12px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+}
+
+.botao-principal:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.centro {
+  text-align: center;
+}
+
+.progresso-diagnostico {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: var(--azul);
+}
+
+.dica {
+  font-size: 18px;
+  background: #fff8e1;
+  border: 1px solid #f3d27a;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: -12px 0 24px;
+}
+
+.alternativa.marcada {
+  border-color: var(--azul);
+  background: var(--azul-claro);
+}
+
+.feedback.neutro .feedback-texto {
+  color: var(--azul);
+}
+
+.etiqueta {
+  margin-left: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--azul);
+  background: var(--azul-claro);
+  border-radius: 999px;
+  padding: 4px 10px;
+  vertical-align: middle;
+}
+
+.alerta {
+  background: #fff4e5;
+  border: 1px solid #f5c58a;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.barra-trilho {
+  position: relative;
+}
+
+.marca-p-l0 {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--texto);
+  opacity: 0.6;
+}
+
+@media (max-width: 600px) {
+  .barra-linha {
+    grid-template-columns: 1fr 48px;
+  }
+
+  .barra-rotulo {
+    grid-column: 1 / -1;
+  }
+
+  .tabela {
+    display: block;
+    overflow-x: auto;
+  }
+}

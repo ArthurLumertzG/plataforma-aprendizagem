@@ -1,5 +1,6 @@
 // Dados fixos do MVP: habilidades (DAG de pré-requisitos), alunos de exemplo
 // e o banco de 20 questões (5 por habilidade, dificuldade 1 a 3).
+// A `dica` só aparece para a criança quando o motor aciona o scaffolding.
 
 export const HABILIDADES = [
   {
@@ -41,6 +42,7 @@ export const QUESTOES = [
     enunciado: 'Quantas bolinhas você vê?  🔵 🔵 🔵',
     alternativas: ['2', '3', '4', '5'],
     resposta_correta: '3',
+    dica: 'Toque em cada bolinha com o dedo e diga um número: 1, 2, 3…',
   },
   {
     id: 'cont_2',
@@ -49,6 +51,7 @@ export const QUESTOES = [
     enunciado: 'Conte os patinhos:  🦆 🦆 🦆 🦆 🦆',
     alternativas: ['4', '5', '6', '7'],
     resposta_correta: '5',
+    dica: 'Aponte para cada patinho uma vez só, contando em voz alta.',
   },
   {
     id: 'cont_3',
@@ -57,6 +60,7 @@ export const QUESTOES = [
     enunciado: 'Qual número vem depois do 6?',
     alternativas: ['5', '6', '7', '8'],
     resposta_correta: '7',
+    dica: 'Conte desde o 1 até chegar no 6. Qual número você diria em seguida?',
   },
   {
     id: 'cont_4',
@@ -65,6 +69,7 @@ export const QUESTOES = [
     enunciado: 'Complete a sequência: 3, 4, 5, ___, 7',
     alternativas: ['2', '6', '8', '9'],
     resposta_correta: '6',
+    dica: 'Leia a sequência em voz alta: 3, 4, 5… qual vem antes do 7?',
   },
   {
     id: 'cont_5',
@@ -73,6 +78,7 @@ export const QUESTOES = [
     enunciado: 'Contando de trás para frente: 10, 9, 8, ___',
     alternativas: ['6', '7', '9', '11'],
     resposta_correta: '7',
+    dica: 'Contar para trás é andar um passo para trás: 10, 9, 8 e…?',
   },
 
   // ---------- adicao_ate_10 ----------
@@ -83,6 +89,7 @@ export const QUESTOES = [
     enunciado: '2 + 1 = ?',
     alternativas: ['2', '3', '4', '5'],
     resposta_correta: '3',
+    dica: 'Mostre 2 dedos, depois levante mais 1. Quantos dedos ficaram?',
   },
   {
     id: 'soma_2',
@@ -91,6 +98,7 @@ export const QUESTOES = [
     enunciado: '3 + 2 = ?',
     alternativas: ['4', '5', '6', '7'],
     resposta_correta: '5',
+    dica: 'Comece no 3 e conte mais 2 para a frente: 4, 5.',
   },
   {
     id: 'soma_3',
@@ -99,6 +107,7 @@ export const QUESTOES = [
     enunciado: '4 + 3 = ?',
     alternativas: ['6', '7', '8', '9'],
     resposta_correta: '7',
+    dica: 'Guarde o 4 na cabeça e conte mais 3 nos dedos: 5, 6, 7.',
   },
   {
     id: 'soma_4',
@@ -107,6 +116,7 @@ export const QUESTOES = [
     enunciado: '5 + 4 = ?',
     alternativas: ['8', '9', '10', '11'],
     resposta_correta: '9',
+    dica: 'Comece pelo número maior, o 5, e conte mais 4 para a frente.',
   },
   {
     id: 'soma_5',
@@ -115,6 +125,7 @@ export const QUESTOES = [
     enunciado: 'Ana tinha 6 figurinhas e ganhou mais 4. Com quantas figurinhas ela ficou?',
     alternativas: ['8', '9', '10', '12'],
     resposta_correta: '10',
+    dica: 'Ela já tinha 6. Conte mais 4 a partir do 6.',
   },
 
   // ---------- subtracao_ate_10 ----------
@@ -125,6 +136,7 @@ export const QUESTOES = [
     enunciado: '3 − 1 = ?',
     alternativas: ['1', '2', '3', '4'],
     resposta_correta: '2',
+    dica: 'Mostre 3 dedos e abaixe 1. Quantos ficaram levantados?',
   },
   {
     id: 'sub_2',
@@ -133,6 +145,7 @@ export const QUESTOES = [
     enunciado: '5 − 2 = ?',
     alternativas: ['2', '3', '4', '5'],
     resposta_correta: '3',
+    dica: 'Desenhe 5 risquinhos e risque 2. Quantos sobraram?',
   },
   {
     id: 'sub_3',
@@ -141,6 +154,7 @@ export const QUESTOES = [
     enunciado: '8 − 3 = ?',
     alternativas: ['3', '4', '5', '6'],
     resposta_correta: '5',
+    dica: 'Comece no 8 e conte 3 para trás: 7, 6, 5.',
   },
   {
     id: 'sub_4',
@@ -149,6 +163,7 @@ export const QUESTOES = [
     enunciado: '9 − 4 = ?',
     alternativas: ['4', '5', '6', '7'],
     resposta_correta: '5',
+    dica: 'Quanto falta do 4 para chegar no 9? Conte para a frente a partir do 4.',
   },
   {
     id: 'sub_5',
@@ -157,6 +172,7 @@ export const QUESTOES = [
     enunciado: 'Tinha 10 bolinhas na caixa e 6 caíram no chão. Quantas ficaram na caixa?',
     alternativas: ['3', '4', '5', '6'],
     resposta_correta: '4',
+    dica: 'Eram 10 e 6 saíram. Conte para trás 6 vezes a partir do 10.',
   },
 
   // ---------- adicao_com_reagrupamento ----------
@@ -167,6 +183,7 @@ export const QUESTOES = [
     enunciado: '7 + 5 = ?',
     alternativas: ['11', '12', '13', '14'],
     resposta_correta: '12',
+    dica: 'Complete o 10 primeiro: 7 + 3 = 10. Sobram 2 do 5. Quanto é 10 + 2?',
   },
   {
     id: 'reagr_2',
@@ -175,6 +192,7 @@ export const QUESTOES = [
     enunciado: '8 + 4 = ?',
     alternativas: ['10', '11', '12', '13'],
     resposta_correta: '12',
+    dica: 'Complete o 10 primeiro: 8 + 2 = 10. Sobram 2 do 4. Quanto é 10 + 2?',
   },
   {
     id: 'reagr_3',
@@ -183,6 +201,7 @@ export const QUESTOES = [
     enunciado: '9 + 6 = ?',
     alternativas: ['14', '15', '16', '17'],
     resposta_correta: '15',
+    dica: 'Complete o 10 primeiro: 9 + 1 = 10. Sobram 5 do 6. Quanto é 10 + 5?',
   },
   {
     id: 'reagr_4',
@@ -191,6 +210,7 @@ export const QUESTOES = [
     enunciado: '8 + 7 = ?',
     alternativas: ['13', '14', '15', '16'],
     resposta_correta: '15',
+    dica: 'Complete o 10 primeiro: 8 + 2 = 10. Sobram 5 do 7. Quanto é 10 + 5?',
   },
   {
     id: 'reagr_5',
@@ -199,5 +219,6 @@ export const QUESTOES = [
     enunciado: 'Lucas tinha 9 bolinhas de gude e ganhou mais 8. Quantas bolinhas ele tem agora?',
     alternativas: ['15', '16', '17', '18'],
     resposta_correta: '17',
+    dica: 'Complete o 10 primeiro: 9 + 1 = 10. Sobram 7 do 8. Quanto é 10 + 7?',
   },
 ];

@@ -1,34 +1,82 @@
 import { Router } from 'express';
 
+import { PARAMETROS, LIMIAR_DOMINIO, LIMITES_P_L0, recalcularDominio } from './bkt.js';
 import {
-  PARAMETROS,
-  LIMIAR_DOMINIO,
-  atualizarPL,
-  escolherHabilidade,
+  ERROS_PARA_SCAFFOLDING,
+  contarErrosSeguidos,
+  estadoDiagnostico,
+  itensDoDiagnostico,
   selecionarProximaQuestao,
-} from './bkt.js';
+} from './motor.js';
 import {
   buscarAluno,
   buscarQuestao,
-  dominioDoAluno,
-  errosSeguidos,
-  historico,
+  criarAluno,
+  eventosDoAluno,
   listarAlunos,
   listarHabilidades,
   listarQuestoes,
-  registrarResposta,
-  salvarDominio,
-  ultimaResposta,
+  registrarEvento,
 } from './db.js';
 
 export const SENHA_PROFESSOR = process.env.SENHA_PROFESSOR || 'professor123';
 
+const TAMANHO_MAX_NOME = 30;
+
 export const router = Router();
 
-/** A criança nunca recebe a resposta correta junto com a questão. */
-function questaoParaAluno(q) {
-  const { resposta_correta, ...publica } = q;
-  return publica;
+/** A criança nunca recebe a resposta correta; a dica só vem no scaffolding. */
+function questaoParaAluno(q, { comDica = false } = {}) {
+  const { resposta_correta, dica, ...publica } = q;
+  return comDica && dica ? { ...publica, dica } : publica;
+}
+
+/**
+ * Tudo que se sabe do aluno, derivado dos eventos dele. Rotas só chamam isto
+ * e formatam a resposta: P(L) nunca é lido de uma tabela.
+ */
+function estadoDoAluno(alunoId) {
+  const habilidades = listarHabilidades();
+  const questoes = listarQuestoes();
+  const eventos = eventosDoAluno(alunoId);
+  const { dominio, pL0, trajetoria } = recalcularDominio(eventos, habilidades);
+  const diagnostico = estadoDiagnostico(eventos, itensDoDiagnostico(habilidades, questoes));
+  return { habilidades, questoes, eventos, dominio, pL0, trajetoria, diagnostico };
+}
+
+function resumoDominio({ habilidades, dominio, pL0, eventos, diagnostico }) {
+  return habilidades.map((h) => {
+    const errosSeguidos = contarErrosSeguidos(eventos, h.id);
+    return {
+      habilidade_id: h.id,
+      nome: h.nome,
+      pre_requisitos: h.pre_requisitos,
+      p_l: dominio[h.id],
+      p_l0: diagnostico.concluido ? pL0[h.id] : null,
+      dominada: dominio[h.id] >= LIMIAR_DOMINIO,
+      erros_seguidos: errosSeguidos,
+      travou: errosSeguidos >= ERROS_PARA_SCAFFOLDING,
+    };
+  });
+}
+
+/** Mais recente primeiro, com o P(L) de cada resposta de prática reconstruído. */
+function historicoRecente({ eventos, trajetoria }, limite) {
+  return eventos
+    .slice(-limite)
+    .reverse()
+    .map((e) => ({
+      id: e.id,
+      tipo: e.tipo,
+      questao_id: e.questao_id,
+      habilidade_id: e.habilidade_id,
+      enunciado: e.enunciado,
+      resposta_dada: e.resposta_dada,
+      correto: e.correto,
+      criado_em: e.criado_em,
+      p_l_antes: trajetoria[e.id]?.p_l_antes ?? null,
+      p_l_depois: trajetoria[e.id]?.p_l_depois ?? null,
+    }));
 }
 
 function exigeAluno(req, res, next) {
@@ -42,44 +90,68 @@ router.get('/alunos', (_req, res) => {
   res.json(listarAlunos());
 });
 
+router.post('/alunos', (req, res) => {
+  const nome = String(req.body?.nome ?? '').trim();
+  if (!nome || nome.length > TAMANHO_MAX_NOME) {
+    return res
+      .status(400)
+      .json({ erro: `Informe um apelido de 1 a ${TAMANHO_MAX_NOME} caracteres` });
+  }
+  res.status(201).json(criarAluno(nome));
+});
+
 router.get('/habilidades', (_req, res) => {
   res.json(listarHabilidades());
 });
 
 router.get('/alunos/:id/dominio', exigeAluno, (req, res) => {
-  const dominio = dominioDoAluno(req.aluno.id, PARAMETROS.P_L0);
+  const estado = estadoDoAluno(req.aluno.id);
+  const { proximo, ...diagnostico } = estado.diagnostico;
   res.json({
     aluno: req.aluno,
     limiar_dominio: LIMIAR_DOMINIO,
-    habilidades: listarHabilidades().map((h) => ({
-      ...h,
-      p_l: dominio[h.id],
-      dominada: dominio[h.id] >= LIMIAR_DOMINIO,
-    })),
+    diagnostico,
+    habilidades: resumoDominio(estado),
   });
 });
 
 router.get('/alunos/:id/historico', exigeAluno, (req, res) => {
   const limite = Number(req.query.limite) || 10;
-  res.json(historico(req.aluno.id, limite));
+  res.json(historicoRecente(estadoDoAluno(req.aluno.id), limite));
 });
 
 router.get('/alunos/:id/proxima-questao', exigeAluno, (req, res) => {
-  const dominio = dominioDoAluno(req.aluno.id, PARAMETROS.P_L0);
-  const habilidades = listarHabilidades();
+  const { habilidades, questoes, eventos, dominio, diagnostico } = estadoDoAluno(req.aluno.id);
+  const progresso = { respondidos: diagnostico.respondidos, total: diagnostico.total };
 
-  // Precisamos saber a habilidade antes de contar os erros seguidos dela (regra 4).
-  const { habilidade_id } = escolherHabilidade(dominio, habilidades);
+  // Cold start: enquanto o teste rápido não termina, só saem itens-âncora.
+  if (!diagnostico.concluido) {
+    return res.json({
+      questao: questaoParaAluno(diagnostico.proximo),
+      diagnostico: progresso,
+      explicacao: {
+        regra: 'diagnostico',
+        habilidade_id: diagnostico.proximo.habilidade,
+        p_l: null,
+        dificuldade_alvo: diagnostico.proximo.dificuldade,
+        motivo:
+          `Teste rápido, item ${diagnostico.respondidos + 1} de ${diagnostico.total}: ` +
+          'as respostas definem o ponto de partida P(L0) de cada habilidade.',
+      },
+    });
+  }
 
-  const { questao, explicacao } = selecionarProximaQuestao({
+  const { questao, explicacao, mostrar_dica } = selecionarProximaQuestao({
     dominio,
     habilidades,
-    questoes: listarQuestoes(),
-    ultimaQuestaoId: ultimaResposta(req.aluno.id)?.questao_id ?? null,
-    errosSeguidos: errosSeguidos(req.aluno.id, habilidade_id),
+    questoes,
+    eventos,
   });
-
-  res.json({ questao: questaoParaAluno(questao), explicacao });
+  res.json({
+    questao: questaoParaAluno(questao, { comDica: mostrar_dica }),
+    diagnostico: progresso,
+    explicacao,
+  });
 });
 
 router.post('/alunos/:id/respostas', exigeAluno, (req, res) => {
@@ -91,29 +163,36 @@ router.post('/alunos/:id/respostas', exigeAluno, (req, res) => {
   const questao = buscarQuestao(questao_id);
   if (!questao) return res.status(404).json({ erro: 'Questão não encontrada' });
 
+  const { diagnostico } = estadoDoAluno(req.aluno.id);
+  const tipo = diagnostico.concluido ? 'pratica' : 'diagnostico';
+
+  // O diagnóstico tem ordem fixa: aceitar outra questão bagunçaria o P(L0).
+  if (tipo === 'diagnostico' && questao.id !== diagnostico.proximo.id) {
+    return res
+      .status(409)
+      .json({ erro: 'Diagnóstico em andamento: responda a questão atual do teste rápido' });
+  }
+
   const correto = String(resposta_dada).trim() === String(questao.resposta_correta).trim();
-
-  const dominio = dominioDoAluno(req.aluno.id, PARAMETROS.P_L0);
-  const pLAntes = dominio[questao.habilidade];
-  const pLDepois = atualizarPL(pLAntes, correto);
-
-  salvarDominio(req.aluno.id, questao.habilidade, pLDepois);
-  registrarResposta({
+  const eventoId = registrarEvento({
     aluno_id: req.aluno.id,
     questao_id: questao.id,
     habilidade_id: questao.habilidade,
+    tipo,
     resposta_dada: String(resposta_dada),
-    correto: correto ? 1 : 0,
-    p_l_antes: pLAntes,
-    p_l_depois: pLDepois,
+    correto,
   });
 
-  res.json({
+  const depois = estadoDoAluno(req.aluno.id);
+  const { proximo, ...diagnosticoDepois } = depois.diagnostico;
+  res.status(201).json({
+    tipo,
     correto,
     resposta_correta: questao.resposta_correta,
     habilidade_id: questao.habilidade,
-    p_l_antes: pLAntes,
-    p_l_depois: pLDepois,
+    p_l_antes: depois.trajetoria[eventoId]?.p_l_antes ?? null,
+    p_l_depois: depois.trajetoria[eventoId]?.p_l_depois ?? null,
+    diagnostico: diagnosticoDepois,
   });
 });
 
@@ -125,20 +204,22 @@ router.get('/professor/painel', (req, res) => {
   const senha = req.get('x-senha-professor');
   if (senha !== SENHA_PROFESSOR) return res.status(401).json({ erro: 'Senha incorreta' });
 
-  const habilidades = listarHabilidades();
   const alunos = listarAlunos().map((aluno) => {
-    const dominio = dominioDoAluno(aluno.id, PARAMETROS.P_L0);
+    const estado = estadoDoAluno(aluno.id);
+    const { proximo, ...diagnostico } = estado.diagnostico;
     return {
       ...aluno,
-      dominio: habilidades.map((h) => ({
-        habilidade_id: h.id,
-        nome: h.nome,
-        p_l: dominio[h.id],
-        dominada: dominio[h.id] >= LIMIAR_DOMINIO,
-      })),
-      historico: historico(aluno.id, 10),
+      diagnostico,
+      dominio: resumoDominio(estado),
+      historico: historicoRecente(estado, 10),
     };
   });
 
-  res.json({ limiar_dominio: LIMIAR_DOMINIO, parametros: PARAMETROS, alunos });
+  res.json({
+    limiar_dominio: LIMIAR_DOMINIO,
+    erros_para_scaffolding: ERROS_PARA_SCAFFOLDING,
+    limites_p_l0: LIMITES_P_L0,
+    parametros: PARAMETROS,
+    alunos,
+  });
 });

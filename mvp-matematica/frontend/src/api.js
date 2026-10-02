@@ -16,6 +16,13 @@ async function json(resposta) {
 export const api = {
   listarAlunos: () => fetch(url('/api/alunos')).then(json),
 
+  criarAluno: (nome) =>
+    fetch(url('/api/alunos'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome }),
+    }).then(json),
+
   proximaQuestao: (alunoId) => fetch(url(`/api/alunos/${alunoId}/proxima-questao`)).then(json),
 
   responder: (alunoId, questao_id, resposta_dada) =>

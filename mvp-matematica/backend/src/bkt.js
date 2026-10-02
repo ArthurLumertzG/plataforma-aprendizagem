@@ -1,9 +1,9 @@
-// Núcleo da personalização: funções puras, sem banco e sem Express.
-// Tudo aqui é determinístico e testável isoladamente (ver bkt.test.js).
+// Modelo do aluno: Bayesian Knowledge Tracing em funções puras, sem banco e sem
+// Express. Daqui só sai P(L); quem escolhe a próxima questão é o motor.js.
 
-/** Parâmetros fixos do MVP — iguais para todas as habilidades e alunos. */
+/** Parâmetros padrão do BKT. Uma habilidade pode sobrescrevê-los (campo `bkt`). */
 export const PARAMETROS = {
-  P_L0: 0.3, // domínio inicial de toda habilidade de um aluno novo
+  P_L0: 0.3, // domínio inicial quando ainda não há diagnóstico da habilidade
   P_T: 0.15, // probabilidade de aprender entre uma resposta e a próxima
   P_S: 0.1, // slip: sabe, mas erra por distração
   P_G: 0.2, // guess: não sabe, mas acerta no chute
@@ -12,14 +12,32 @@ export const PARAMETROS = {
 /** A partir deste valor de P(L) consideramos a habilidade dominada. */
 export const LIMIAR_DOMINIO = 0.6;
 
-/** Erros seguidos na mesma habilidade que disparam o "volta para o fácil". */
-export const ERROS_PARA_FACILITAR = 3;
+/**
+ * O diagnóstico inicializa P(L0) "nem zero, nem expert": duas respostas não
+ * bastam para cravar que a criança domina ou ignora a habilidade.
+ */
+export const LIMITES_P_L0 = { MIN: 0.1, MAX: 0.85 };
+
+/** P(S)/P(G) não são globais: cada habilidade pode calibrar os seus. */
+export function parametrosDa(habilidade) {
+  return { ...PARAMETROS, ...(habilidade?.bkt ?? {}) };
+}
 
 /**
- * Atualização Bayesian Knowledge Tracing de uma observação.
+ * Só a evidência da observação, sem a transição de aprendizagem:
  *
  *   correto:   P(L|obs) = P(L)(1-S) / [P(L)(1-S) + (1-P(L))G]
  *   incorreto: P(L|obs) = P(L)S     / [P(L)S     + (1-P(L))(1-G)]
+ */
+export function posterior(pL, correto, params = PARAMETROS) {
+  const { P_S, P_G } = params;
+  return correto
+    ? (pL * (1 - P_S)) / (pL * (1 - P_S) + (1 - pL) * P_G)
+    : (pL * P_S) / (pL * P_S + (1 - pL) * (1 - P_G));
+}
+
+/**
+ * Atualização BKT completa de uma resposta de prática:
  *   P(L_novo) = P(L|obs) + (1 - P(L|obs)) * T
  *
  * @param {number} pL P(L) atual, entre 0 e 1.
@@ -28,118 +46,61 @@ export const ERROS_PARA_FACILITAR = 3;
  * @returns {number} novo P(L).
  */
 export function atualizarPL(pL, correto, params = PARAMETROS) {
-  const { P_T, P_S, P_G } = params;
-
-  const posterior = correto
-    ? (pL * (1 - P_S)) / (pL * (1 - P_S) + (1 - pL) * P_G)
-    : (pL * P_S) / (pL * P_S + (1 - pL) * (1 - P_G));
-
-  return posterior + (1 - posterior) * P_T;
-}
-
-/** Um pré-requisito está satisfeito quando seu P(L) alcançou o limiar. */
-function preRequisitosSatisfeitos(habilidade, dominio) {
-  return habilidade.pre_requisitos.every(
-    (id) => (dominio[id] ?? PARAMETROS.P_L0) >= LIMIAR_DOMINIO,
-  );
+  const p = posterior(pL, correto, params);
+  return p + (1 - p) * params.P_T;
 }
 
 /**
- * Regras 1 e 2: qual habilidade praticar agora.
- * @returns {{habilidade_id: string, regra: string, motivo: string}}
- */
-export function escolherHabilidade(dominio, habilidades) {
-  const pL = (id) => dominio[id] ?? PARAMETROS.P_L0;
-
-  // Regra 1 — zona de desenvolvimento proximal: ainda não domina, mas já tem base.
-  const naZona = habilidades.find(
-    (h) => pL(h.id) < LIMIAR_DOMINIO && preRequisitosSatisfeitos(h, dominio),
-  );
-  if (naZona) {
-    return {
-      habilidade_id: naZona.id,
-      regra: 'zona_proximal',
-      motivo:
-        `P(L) de "${naZona.nome}" é ${pL(naZona.id).toFixed(2)} (abaixo de ${LIMIAR_DOMINIO}) ` +
-        'e os pré-requisitos já estão dominados.',
-    };
-  }
-
-  // Regra 2 — dominou tudo que estava disponível: reforça a habilidade mais frágil.
-  const dominadas = habilidades
-    .filter((h) => pL(h.id) >= LIMIAR_DOMINIO)
-    .sort((a, b) => pL(a.id) - pL(b.id));
-  if (dominadas.length > 0) {
-    const alvo = dominadas[0];
-    return {
-      habilidade_id: alvo.id,
-      regra: 'reforco',
-      motivo:
-        'Todas as habilidades disponíveis já estão dominadas; reforçando a mais frágil ' +
-        `("${alvo.nome}", P(L) = ${pL(alvo.id).toFixed(2)}).`,
-    };
-  }
-
-  // Caso degenerado (nenhuma habilidade elegível nem dominada): fica na primeira.
-  return {
-    habilidade_id: habilidades[0].id,
-    regra: 'fallback',
-    motivo: 'Nenhuma habilidade elegível; praticando a primeira do grafo.',
-  };
-}
-
-/** Regra 3: P(L) baixo → dificuldade 1; médio → 2; alto → 3. */
-export function dificuldadeAlvo(pL) {
-  if (pL < 0.4) return 1;
-  if (pL < 0.75) return 2;
-  return 3;
-}
-
-/**
- * Seleciona a próxima questão aplicando as regras 1 a 4.
+ * P(L0) de uma habilidade a partir das respostas do diagnóstico. Aplica só a
+ * evidência (sem P(T)): o teste mede o que a criança já sabe, não ensina.
  *
- * @param {object} ctx
- * @param {Record<string, number>} ctx.dominio P(L) por habilidade.
- * @param {Array} ctx.habilidades Habilidades em ordem de pré-requisito.
- * @param {Array} ctx.questoes Banco de questões.
- * @param {string|null} [ctx.ultimaQuestaoId] Última questão respondida pelo aluno.
- * @param {number} [ctx.errosSeguidos] Erros consecutivos na habilidade escolhida.
- * @returns {{questao: object, explicacao: object}}
+ * @param {boolean[]} respostas Acertos/erros nos itens-âncora da habilidade.
  */
-export function selecionarProximaQuestao({
-  dominio,
-  habilidades,
-  questoes,
-  ultimaQuestaoId = null,
-  errosSeguidos = 0,
-}) {
-  const escolha = escolherHabilidade(dominio, habilidades);
-  const pL = dominio[escolha.habilidade_id] ?? PARAMETROS.P_L0;
+export function estimarPL0(respostas, params = PARAMETROS) {
+  let pL = params.P_L0;
+  for (const correto of respostas) pL = posterior(pL, correto, params);
+  return Math.min(LIMITES_P_L0.MAX, Math.max(LIMITES_P_L0.MIN, pL));
+}
 
-  // Regra 4 — travou (3 erros seguidos): volta para a dificuldade 1, ignorando P(L).
-  const forcouFacil = errosSeguidos >= ERROS_PARA_FACILITAR;
-  const alvo = forcouFacil ? 1 : dificuldadeAlvo(pL);
+/**
+ * Recalcula o domínio inteiro a partir da sequência ordenada de eventos.
+ * P(L) nunca é gravado: ele é sempre derivado daqui, o que mantém os eventos
+ * como fonte da verdade (e resolve conflitos se um dia houver sync offline).
+ *
+ * Eventos `diagnostico` definem o ponto de partida P(L0) de cada habilidade;
+ * eventos `pratica` aplicam a atualização BKT na ordem em que aconteceram.
+ *
+ * @param {Array<{id, habilidade_id, correto: boolean, tipo: 'diagnostico'|'pratica'}>} eventos
+ *   Em ordem cronológica.
+ * @param {Array} habilidades
+ * @returns {{dominio: Record<string, number>, pL0: Record<string, number>,
+ *            trajetoria: Record<string, {p_l_antes: number, p_l_depois: number}>}}
+ */
+export function recalcularDominio(eventos, habilidades) {
+  const porId = Object.fromEntries(habilidades.map((h) => [h.id, h]));
 
-  const candidatas = questoes.filter((q) => q.habilidade === escolha.habilidade_id);
-  const semRepetir = candidatas.filter((q) => q.id !== ultimaQuestaoId);
-  const pool = semRepetir.length > 0 ? semRepetir : candidatas;
+  const respostasDiagnostico = {};
+  for (const e of eventos) {
+    if (e.tipo !== 'diagnostico') continue;
+    (respostasDiagnostico[e.habilidade_id] ??= []).push(e.correto);
+  }
 
-  // Dificuldade mais próxima do alvo; empate resolvido pela ordem do banco.
-  const questao = pool.reduce((melhor, q) =>
-    Math.abs(q.dificuldade - alvo) < Math.abs(melhor.dificuldade - alvo) ? q : melhor,
-  );
+  const pL0 = {};
+  for (const h of habilidades) {
+    const params = parametrosDa(h);
+    const respostas = respostasDiagnostico[h.id];
+    pL0[h.id] = respostas ? estimarPL0(respostas, params) : params.P_L0;
+  }
 
-  return {
-    questao,
-    explicacao: {
-      regra: forcouFacil ? 'scaffolding' : escolha.regra,
-      habilidade_id: escolha.habilidade_id,
-      p_l: pL,
-      dificuldade_alvo: alvo,
-      motivo: forcouFacil
-        ? `${errosSeguidos} erros seguidos em "${escolha.habilidade_id}": ` +
-          'voltando para uma questão de dificuldade 1.'
-        : escolha.motivo,
-    },
-  };
+  const dominio = { ...pL0 };
+  const trajetoria = {};
+  for (const e of eventos) {
+    if (e.tipo !== 'pratica' || !(e.habilidade_id in dominio)) continue;
+    const antes = dominio[e.habilidade_id];
+    const depois = atualizarPL(antes, e.correto, parametrosDa(porId[e.habilidade_id]));
+    dominio[e.habilidade_id] = depois;
+    trajetoria[e.id] = { p_l_antes: antes, p_l_depois: depois };
+  }
+
+  return { dominio, pL0, trajetoria };
 }

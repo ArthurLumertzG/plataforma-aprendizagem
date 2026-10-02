@@ -4,12 +4,36 @@ Guia para o Claude Code (e para o grupo) trabalhar neste repositório.
 
 ## Estado atual
 
-Projeto **em fase de concepção** — ainda não há código. A pasta tem só os dois documentos-fonte:
+Documentos-fonte na raiz:
 
 - `Plataforma_Aprendizagem_Personalizada_Resumo.docx`: pesquisa de mercado, evidências científicas, restrições legais (LGPD/ECA Digital) e modelo de negócio social.
 - `Documento_Tecnico_Arquitetura.docx`: ADRs, diagramas C4, modelo de dados, contratos de API, stack, estrutura de pastas e roadmap do MVP.
 
 Os dois documentos são a **fonte da verdade**. Se algo aqui divergir deles, siga os documentos e atualize este arquivo.
+
+### Demonstração aprovada: `mvp-matematica/`
+
+Existe uma **demo local aprovada** para mostrar a personalização funcionando. Como rodar, a API e o comportamento estão em `mvp-matematica/README.md`. Ela já tem:
+
+- BKT em funções puras (`backend/src/bkt.js`), com P(L) **recalculado a partir de eventos append-only** (não há tabela de domínio).
+- Diagnóstico inicial: 2 itens por habilidade, que inicializam `P(L0)`.
+- Motor de recomendação (`backend/src/motor.js`): zona proximal, reforço da habilidade mais frágil, dificuldade pelo P(L) e scaffolding com dica após 2 erros seguidos.
+- Painel do professor com alertas de travamento e o porquê de cada recomendação.
+- Testes por regra e com alunos sintéticos (`npm test` em `backend/`).
+
+Ela é **deliberadamente mais simples** que a arquitetura-alvo descrita no resto deste arquivo. Não "corrija" essas divergências sem combinar com o grupo:
+
+| Arquitetura-alvo (este arquivo) | Demo atual |
+|---|---|
+| Next.js full-stack + PostgreSQL | Express + SQLite (`backend/`) e React/Vite (`frontend/`), em JavaScript |
+| Grafo de senso numérico (rascunho abaixo) | 4 habilidades: contagem → adição/subtração até 10 → adição com reagrupamento |
+| 7 entidades, com Sessão e Consentimento | Aluno, Habilidade, Questão e Evento. Sem sessão nem consentimento |
+| Autenticação + consentimento parental | Senha única no painel. Só alunos fictícios |
+| Repetição espaçada + progressão por sucesso consistente | Ainda não implementadas. A regra 2 é "reforço da mais frágil" |
+| Tempo de resposta e dicas modulam S/G | Não são coletados (decisão em aberto) |
+| PWA offline-first | Só online |
+
+Ao evoluir a demo, mantenha as fronteiras do modelo do aluno e do motor: `bkt.js` não escolhe itens e `motor.js` não calcula BKT. Atualize o `mvp-matematica/README.md` junto com o código.
 
 Contexto: trabalho de graduação em Engenharia de Software / Ciência da Computação, com foco em empreendedorismo social. Público: o próprio grupo e a banca avaliadora. As decisões precisam ser **defensáveis** (tradeoffs explícitos), não só funcionais.
 
@@ -148,6 +172,8 @@ Soma até 10 + Subtração até 10 ─→ Valor posicional (dezena/unidade) ─�
 5. **Cliente:** app da criança simplificado + painel básico. Fluxo ponta a ponta demonstrável.
 6. **Piloto:** grupo pequeno real, com pré/pós-teste, comparado com a recomendação manual de um professor.
 
+Na demo (`mvp-matematica/`), as fases 2 e 3 estão cobertas, exceto a repetição espaçada e a progressão por sucesso consistente. As fases 1, 4 e 5 existem em versão simplificada (ver tabela em "Estado atual").
+
 ## Privacidade por design (checklist para todo código novo)
 
 - [ ] Coleta mínima: o evento guarda só o que o BKT usa (correto, tempo, dicas).
@@ -172,3 +198,11 @@ Soma até 10 + Subtração até 10 ─→ Valor posicional (dezena/unidade) ─�
 - Validação do grafo de matemática pelos conteudistas.
 - Composição do diagnóstico inicial (quais 10–15 itens, quantos por habilidade).
 - Estratégia de sincronização offline entre múltiplos dispositivos da mesma criança.
+- Migração da demo para a stack-alvo (Next.js + Postgres) ou atualização da stack-alvo para refletir a demo.
+
+Valores **provisórios** usados na demo, sem validação pedagógica. São constantes em `bkt.js`/`motor.js`, fáceis de trocar:
+
+- Limiar de domínio único de **0,6** (pré-requisito e "dominado").
+- Diagnóstico com **2 itens por habilidade** (um de dificuldade 1 e um de dificuldade 2). `P(L0)` vem só da evidência do BKT, sem P(T), limitado a **[0,10; 0,85]**.
+- BKT padrão: P(L0) = 0,3; P(T) = 0,15; P(S) = 0,1; P(G) = 0,2. Uma habilidade pode sobrescrever esses valores pelo campo `bkt` no seed.
+- Scaffolding após **2 erros seguidos** na mesma habilidade.
