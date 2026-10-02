@@ -6,19 +6,19 @@ Roda inteiro na máquina local, sem Docker e sem nuvem.
 
 ## Como rodar
 
-Abra **dois terminais**.
+Da **raiz do repositório**, um terminal só:
 
 ```bash
-# terminal 1 — API (http://localhost:3001)
-cd backend
-npm install
-npm run dev        # cria e popula backend/data/mvp.db na primeira execução
-
-# terminal 2 — interface (http://localhost:5173)
-cd frontend
-npm install
-npm run dev
+npm install        # instala a raiz, o backend e o frontend
+npm run dev        # sobe a API (http://localhost:3001) e a interface (http://localhost:5173)
 ```
+
+Na primeira execução a API cria e popula `backend/data/mvp.db`. Os logs saem no mesmo
+terminal, prefixados com `[api]` e `[web]`. Ctrl+C derruba os dois, e se um cair o
+outro também é encerrado.
+
+Se preferir separado, rode `npm install` e `npm run dev` em `backend/` e em
+`frontend/`, cada um no seu terminal.
 
 Depois abra <http://localhost:5173>:
 
@@ -30,8 +30,7 @@ Depois abra <http://localhost:5173>:
 Testes do núcleo estatístico:
 
 ```bash
-cd backend
-npm test
+npm test           # da raiz (ou dentro de backend/)
 ```
 
 ## Publicar a interface na Vercel (opcional)

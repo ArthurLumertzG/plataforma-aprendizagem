@@ -1,0 +1,15 @@
+{
+  "name": "plataforma-aprendizagem",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Atalhos para rodar o MVP de matemática (API + interface) a partir da raiz.",
+  "scripts": {
+    "postinstall": "cd mvp-matematica/backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently -k -n api,web -c blue,green \"cd mvp-matematica/backend && npm run dev\" \"cd mvp-matematica/frontend && npm run dev\"",
+    "test": "cd mvp-matematica/backend && npm test",
+    "build": "cd mvp-matematica/frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
