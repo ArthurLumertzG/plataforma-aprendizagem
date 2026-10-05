@@ -1,0 +1,577 @@
+/* ==========================================================================
+   Painel do professor: denso e calmo. A cor só aparece onde carrega
+   significado (domínio, travamento, recomendação).
+   ========================================================================== */
+
+/* ---------- entrada ---------- */
+.entrada {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 20px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px 16px;
+  background-color: var(--papel);
+  background-image: var(--quadriculado);
+  background-size: var(--passo-quadriculado) var(--passo-quadriculado);
+}
+
+.entrada__cartao {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  width: min(100%, 440px);
+  padding: 32px;
+  border-radius: var(--raio-grande);
+  background: var(--superficie);
+  box-shadow: var(--sombra-folha);
+}
+
+.entrada__cartao h1 {
+  margin-top: 12px;
+  font-size: 1.9rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.entrada__texto {
+  color: var(--tinta-2);
+}
+
+.entrada__cartao form {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.entrada__cartao form .botao {
+  margin-top: 14px;
+}
+
+.entrada__nota {
+  display: flex;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-2);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.entrada__nota .icone {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.entrada__voltar {
+  font-weight: 600;
+}
+
+/* ---------- estrutura ---------- */
+.painel {
+  min-height: 100vh;
+}
+
+.painel__topo {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 12px max(16px, calc((100% - 1440px) / 2 + 24px));
+  border-bottom: 1px solid var(--linha);
+  background: var(--superficie);
+}
+
+.painel__secao {
+  padding-left: 20px;
+  border-left: 1px solid var(--linha);
+  color: var(--tinta-2);
+  font-weight: 600;
+}
+
+.painel__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: var(--tinta-2);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.painel__pulso {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--acerto-vivo);
+  box-shadow: 0 0 0 0 rgb(43 138 94 / 0.5);
+  animation: pulso 3s ease-out infinite;
+}
+
+.painel__pulso--falha {
+  background: var(--atencao-vivo);
+  animation: none;
+}
+
+@keyframes pulso {
+  0% {
+    box-shadow: 0 0 0 0 rgb(43 138 94 / 0.45);
+  }
+  40%,
+  100% {
+    box-shadow: 0 0 0 8px rgb(43 138 94 / 0);
+  }
+}
+
+@media (max-width: 720px) {
+  .painel__secao {
+    display: none;
+  }
+
+  .painel__status {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .painel__topo .botao {
+    margin-left: auto;
+  }
+}
+
+.painel__corpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  align-items: start;
+  gap: 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 28px max(16px, 24px) 64px;
+}
+
+@media (max-width: 1180px) {
+  .painel__corpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .painel__corpo {
+    padding-inline: 16px;
+  }
+}
+
+.painel__principal {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.painel__resumo h1 {
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.painel__resumo p {
+  margin-top: 4px;
+  color: var(--tinta-2);
+  font-size: 1.05rem;
+}
+
+/* ---------- precisa de atenção ---------- */
+.atencao h2,
+.matriz h2 {
+  font-size: 1.15rem;
+}
+
+.atencao__vazio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--tinta-2);
+}
+
+.atencao__vazio .icone {
+  flex-shrink: 0;
+  color: var(--acerto);
+}
+
+.atencao__lista {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.atencao__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #efcf9f;
+  border-radius: var(--raio);
+  background: var(--atencao-fundo);
+}
+
+.atencao__icone {
+  color: var(--atencao);
+}
+
+@media (max-width: 600px) {
+  .atencao__item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .atencao__item .botao {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* ---------- matriz aluno × habilidade ---------- */
+.matriz {
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-grande);
+  background: var(--superficie);
+  overflow: hidden;
+}
+
+.matriz__cabeca {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px 14px;
+}
+
+.matriz__legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  color: var(--tinta-2);
+  font-size: 0.86rem;
+}
+
+.legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.regua--amostra {
+  width: 42px;
+}
+
+.legenda-limiar {
+  width: 2px;
+  height: 16px;
+  background: var(--tinta);
+}
+
+.legenda-partida {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--tinta-2);
+  border-radius: 50%;
+}
+
+.matriz__rolagem {
+  overflow-x: auto;
+}
+
+.matriz__tabela {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+}
+
+.matriz__tabela th,
+.matriz__tabela td {
+  padding: 12px 16px;
+  border-top: 1px solid var(--linha);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.matriz__tabela thead th {
+  color: var(--tinta-2);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.25;
+  background: var(--superficie-2);
+}
+
+.matriz__tabela thead th:first-child {
+  width: 190px;
+}
+
+.matriz__tabela tbody tr {
+  cursor: pointer;
+}
+
+.matriz__tabela tbody tr:hover {
+  background: #f6f9fb;
+}
+
+.matriz__linha--selecionada,
+.matriz__tabela tbody tr.matriz__linha--selecionada:hover {
+  background: #eaf1fb;
+}
+
+.matriz__linha--selecionada th {
+  box-shadow: inset 4px 0 0 var(--acao);
+}
+
+.matriz__aluno {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.matriz__nome {
+  display: block;
+  font-weight: 700;
+}
+
+.matriz__situacao {
+  display: block;
+  color: var(--tinta-2);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.matriz__tabela td {
+  min-width: 120px;
+}
+
+.matriz__valor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.matriz__celula--travou {
+  background: rgb(252 239 217 / 0.7);
+}
+
+/* ---------- detalhe do aluno ---------- */
+.detalhe {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-grande);
+  background: var(--superficie);
+}
+
+.detalhe__topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 6px;
+}
+
+.detalhe__topo h2 {
+  font-size: 1.4rem;
+}
+
+.detalhe__bloco {
+  display: grid;
+  gap: 8px;
+  padding: 14px 20px 18px;
+}
+
+.detalhe__bloco + .detalhe__bloco {
+  border-top: 1px solid var(--linha);
+}
+
+.detalhe__bloco h3 {
+  font-size: 1rem;
+}
+
+.detalhe__nota {
+  color: var(--tinta-2);
+  font-size: 0.9rem;
+}
+
+.recomendacao {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--raio);
+  background: #eaf1fb;
+}
+
+.recomendacao__regra {
+  color: var(--acao-escura);
+  font-weight: 750;
+}
+
+.recomendacao__item {
+  font-weight: 600;
+}
+
+.recomendacao__motivo {
+  color: var(--tinta-2);
+  font-size: 0.92rem;
+}
+
+.recomendacao__enunciado {
+  padding-top: 8px;
+  border-top: 1px solid rgb(47 102 171 / 0.2);
+  font-family: var(--fonte-crianca);
+  font-size: 1.05rem;
+}
+
+.detalhe__mapa {
+  overflow-x: auto;
+  padding: 6px 0 4px;
+}
+
+/* Mapa de habilidades (DAG) */
+.mapa {
+  position: relative;
+  margin: 0 auto;
+}
+
+.mapa__arestas {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.mapa__arestas path {
+  fill: none;
+  stroke: var(--tinta-3);
+  stroke-width: 2;
+}
+
+.mapa__nos {
+  position: absolute;
+  inset: 0;
+}
+
+.mapa__no {
+  position: absolute;
+  display: grid;
+  align-content: space-between;
+  gap: 4px;
+  padding: 9px 11px 10px;
+  border: 2px solid var(--linha);
+  border-radius: 12px;
+  background: var(--superficie);
+}
+
+.mapa__no--alvo {
+  border-color: var(--acao);
+  box-shadow: 0 0 0 3px rgb(47 102 171 / 0.18);
+}
+
+.mapa__no--travou {
+  border-color: var(--atencao-vivo);
+  background: #fffaf2;
+}
+
+.mapa__nome {
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.mapa__linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.mapa__valor {
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.mapa__barra {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+.mapa__barra span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--ficha-azul);
+}
+
+/* Histórico */
+.historico {
+  display: grid;
+}
+
+.historico__item {
+  display: grid;
+  grid-template-columns: 6.2em minmax(0, 1fr) auto;
+  grid-template-areas:
+    'resultado enunciado variacao'
+    'resultado meta variacao';
+  gap: 0 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--linha);
+}
+
+.historico__item:first-child {
+  border-top: 0;
+}
+
+.historico__resultado {
+  grid-area: resultado;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: start;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.historico__item--acerto .historico__resultado {
+  color: var(--acerto);
+}
+
+.historico__item--erro .historico__resultado {
+  color: var(--quase);
+}
+
+.historico__enunciado {
+  grid-area: enunciado;
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.historico__meta {
+  grid-area: meta;
+  color: var(--tinta-3);
+  font-size: 0.8rem;
+}
+
+.historico__variacao {
+  grid-area: variacao;
+  align-self: start;
+  color: var(--tinta-2);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

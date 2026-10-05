@@ -22,9 +22,12 @@ Se preferir separado, rode `npm install` e `npm run dev` em `backend/` e em
 
 Depois abra <http://localhost:5173>:
 
-- **`/aluno`** — escolha um dos 5 perfis (ou cadastre um apelido novo) e responda as
+- **`/`**: página institucional (o que é, como a personalização funciona, para quem,
+  privacidade e limites da evidência). Tem um simulador da régua de domínio (BKT) que
+  não usa a API.
+- **`/aluno`**: escolha um dos 5 perfis (ou cadastre um apelido novo) e responda às
   questões. Sem login. Todo aluno começa pelo **teste rápido** de 8 questões.
-- **`/professor`** — senha padrão **`professor123`** (ou o valor de `SENHA_PROFESSOR`
+- **`/professor`**: senha padrão **`professor123`** (ou o valor de `SENHA_PROFESSOR`
   no ambiente do backend). O painel se atualiza sozinho a cada 3 segundos.
 
 Testes do núcleo estatístico:
@@ -111,6 +114,52 @@ offline, sincronizar vira "juntar listas de eventos e recalcular".
 A API devolve a regra aplicada junto com a questão. A tela do aluno mostra isso no
 bloco "Por que esta questão?", útil para a demonstração.
 
+## Interface
+
+O conceito visual é o **caderno quadriculado** de matemática, e as quantidades aparecem
+como as **fichas** do material concreto da sala de aula. O nome **Quadriculado** é
+provisório e fica numa constante só (`MARCA`, em `frontend/src/lib/textos.js`).
+
+**Área da criança**
+
+- **A questão vira material concreto** (`lib/representacao.js`). O frontend interpreta
+  o texto do enunciado (o seed não muda): figuras viram objetos que dá para tocar e
+  numerar, sequências viram casas com uma vazia e contas viram `a + b = ?`. Um enunciado
+  que não casa com nenhum padrão aparece como texto puro.
+- **O material de apoio só aparece no scaffolding**: quadros de dez para soma e
+  subtração e trilha numérica para "depois do N". Se ele aparecesse sempre, a criança
+  acertaria contando as fichas, e o BKT leria esse acerto como domínio da conta.
+  Na soma que passa de 10, a segunda cor completa o primeiro quadro antes de ir para o
+  próximo, que é a estratégia "complete o 10" das dicas. O apoio continua visível
+  depois da resposta, porque é ali que ele explica o erro.
+- **Tocar nas figuras para contar está sempre liberado**. Equivale a apontar com o
+  dedo e não revela a resposta.
+- **Leitura em voz alta** com a Web Speech API do navegador (`lib/fala.js`): nada vai
+  para um serviço externo. Os símbolos são lidos como uma professora leria ("3 menos
+  1 é igual a quanto?").
+- **Ajustes de leitura** por criança, salvos só no `localStorage` daquele aparelho
+  (`lib/preferencias.js`): tamanho da letra, tipo de letra, espaçamento extra (valores
+  do WCAG 1.4.12), tela calma (sem animação nem quadriculado) e leitura automática.
+  A evidência a favor de "fontes para dislexia" é fraca. O espaçamento extra tem um
+  pouco mais de apoio (Zorzi et al., 2012), ainda que modesto, e por isso é uma opção à
+  parte.
+- **Sem vermelho de erro, sem cronômetro, sem ranking**. Errar mostra a resposta certa
+  em lilás ("Quase!"). No teste rápido não há certo nem errado, só "Anotado!".
+- **"Bastidores"** (recolhido) mostra a regra, o P(L) e o motivo de cada questão, para
+  a apresentação.
+
+**Painel do professor**: alertas de travamento no topo, matriz aluno × habilidade
+(P(L), limiar e ponto de partida do teste rápido) e, para o aluno selecionado, a
+próxima recomendação com a regra e o motivo, o mapa de pré-requisitos com o P(L) em
+cada nó e as últimas respostas. A recomendação vem de `GET /proxima-questao`, que não
+grava nada.
+
+**Fontes auto-hospedadas** (`@fontsource`, sem Google Fonts): nenhum acesso de criança
+passa por terceiros, e o app fica mais perto do offline-first. Andika (SIL, feita para
+leitores iniciantes) na área da criança e Atkinson Hyperlegible Next nas telas de
+adulto. Os numerais são sempre os da Andika, então o professor vê os números com a
+mesma forma que a criança.
+
 ## Conteúdo
 
 4 habilidades encadeadas por pré-requisito e 20 questões (5 por habilidade,
@@ -150,8 +199,10 @@ mvp-matematica/
 │   └── package.json
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/AlunoPage.jsx
-│   │   ├── pages/ProfessorPage.jsx
+│   │   ├── pages/         # InicioPage, AlunoPage, ProfessorPage
+│   │   ├── components/    # questão e material de apoio, ajustes, mapa de habilidades…
+│   │   ├── lib/           # representacao.js, fala.js, preferencias.js, textos.js
+│   │   ├── styles/        # base (tokens), inicio, crianca, professor
 │   │   └── App.jsx
 │   └── package.json
 └── README.md

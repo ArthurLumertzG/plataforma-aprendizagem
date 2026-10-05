@@ -1,0 +1,465 @@
+/* Numerais da Andika em toda a plataforma: os números que o professor lê têm a
+   mesma forma dos que a criança vê (e evita o zero cortado da Atkinson). */
+@font-face {
+  font-family: 'Numerais';
+  src: url('../../node_modules/@fontsource/andika/files/andika-latin-400-normal.woff2') format('woff2');
+  font-weight: 100 599;
+  font-display: swap;
+  unicode-range: U+0030-0039;
+}
+
+@font-face {
+  font-family: 'Numerais';
+  src: url('../../node_modules/@fontsource/andika/files/andika-latin-700-normal.woff2') format('woff2');
+  font-weight: 600 900;
+  font-display: swap;
+  unicode-range: U+0030-0039;
+}
+
+/* ==========================================================================
+   Tokens. Conceito: o caderno quadriculado de matemática e as fichas de
+   contagem da sala de aula. Azul e âmbar são as duas cores de ficha; verde é
+   acerto e lilás é "quase" (nunca vermelho de erro para a criança).
+   ========================================================================== */
+:root {
+  --papel: #f3f7f6;
+  --quadricula: #d6e3e4;
+  --superficie: #ffffff;
+  --superficie-2: #eaf1f0;
+  --linha: #cbd6da;
+
+  --tinta: #1d2a44;
+  --tinta-2: #46536d;
+  --tinta-3: #5f6b84;
+
+  --acao: #2f66ab;
+  --acao-escura: #24528c;
+
+  --ficha-azul: #3b78c2;
+  --ficha-azul-escura: #2a5c99;
+  --ficha-azul-clara: #8db4e2;
+  --ficha-ambar: #eeae38;
+  --ficha-ambar-escura: #b9821c;
+
+  --acerto: #23784f;
+  --acerto-vivo: #2b8a5e;
+  --acerto-fundo: #e3f3ea;
+  --quase: #6552b3;
+  --quase-vivo: #7d6bc4;
+  --quase-fundo: #eeebf8;
+  --atencao: #8f4c0c;
+  --atencao-vivo: #c97a1e;
+  --atencao-fundo: #fcefd9;
+
+  --fonte-adulto: 'Numerais', 'Atkinson Hyperlegible Next Variable', 'Segoe UI', system-ui,
+    sans-serif;
+  --fonte-crianca: 'Andika', 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+
+  --raio-pequeno: 8px;
+  --raio: 14px;
+  --raio-grande: 22px;
+
+  --sombra-folha: 0 1px 0 var(--linha), 0 10px 30px -18px rgb(29 42 68 / 0.35);
+  --quadriculado: linear-gradient(var(--quadricula) 1px, transparent 1px),
+    linear-gradient(90deg, var(--quadricula) 1px, transparent 1px);
+  --passo-quadriculado: 28px;
+
+  color-scheme: light;
+}
+
+/* ---------- reset mínimo ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--fonte-adulto);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+img,
+svg {
+  display: block;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--acao);
+  text-underline-offset: 0.18em;
+}
+
+code {
+  font-size: 0.92em;
+  background: var(--superficie-2);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+}
+
+:focus-visible {
+  outline: 3px solid var(--tinta);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.visualmente-oculto {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- marca ---------- */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--tinta);
+  text-decoration: none;
+  font-family: var(--fonte-adulto);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.simbolo-marca {
+  flex-shrink: 0;
+}
+
+/* ---------- botões ---------- */
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0.55em 1.1em;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.botao:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.botao:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.botao--principal {
+  background: var(--acao);
+  color: #fff;
+}
+
+.botao--principal:hover:not(:disabled) {
+  background: var(--acao-escura);
+}
+
+.botao--leve {
+  background: var(--superficie);
+  border-color: var(--linha);
+  color: var(--tinta);
+}
+
+.botao--leve:hover:not(:disabled) {
+  border-color: var(--tinta-3);
+}
+
+.botao--texto {
+  background: none;
+  color: var(--acao);
+  padding-inline: 0.5em;
+}
+
+.botao--acerto {
+  background: var(--acerto-fundo);
+  border-color: var(--acerto-vivo);
+  color: var(--acerto);
+}
+
+.botao--quase {
+  background: var(--quase-fundo);
+  border-color: var(--quase-vivo);
+  color: var(--quase);
+}
+
+.botao--grande {
+  min-height: 56px;
+  padding: 0.7em 1.5em;
+  font-size: 1.08em;
+}
+
+.botao--largo {
+  width: 100%;
+}
+
+.botao-icone {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.botao-icone:hover {
+  background: var(--superficie-2);
+}
+
+/* ---------- campos ---------- */
+.rotulo {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.campo {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.6em 0.9em;
+  border: 2px solid var(--linha);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie);
+}
+
+.campo:focus-visible {
+  border-color: var(--tinta);
+  outline-offset: 2px;
+}
+
+.mensagem-erro {
+  margin-top: 8px;
+  color: var(--atencao);
+  font-weight: 700;
+}
+
+/* ---------- avatar: uma ficha com a inicial ---------- */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-family: var(--fonte-crianca);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #fff;
+  box-shadow:
+    inset 0 0 0 3px rgb(255 255 255 / 0.35),
+    0 2px 0 var(--sombra-avatar, rgb(0 0 0 / 0.2));
+}
+
+.avatar--grande {
+  width: 76px;
+  height: 76px;
+  font-size: 2.1rem;
+  box-shadow:
+    inset 0 0 0 5px rgb(255 255 255 / 0.35),
+    0 4px 0 var(--sombra-avatar);
+}
+
+.avatar--azul {
+  background: var(--ficha-azul);
+  --sombra-avatar: var(--ficha-azul-escura);
+}
+
+.avatar--ambar {
+  background: var(--ficha-ambar);
+  color: var(--tinta);
+  --sombra-avatar: var(--ficha-ambar-escura);
+}
+
+.avatar--verde {
+  background: var(--acerto-vivo);
+  --sombra-avatar: var(--acerto);
+}
+
+.avatar--lilas {
+  background: var(--quase-vivo);
+  --sombra-avatar: var(--quase);
+}
+
+/* ---------- quadro de dez e fichas (criança e página inicial) ---------- */
+.quadro-dez {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  width: min(100%, 15em);
+  border: 3px solid var(--tinta);
+  border-radius: 10px;
+  background: var(--superficie);
+  overflow: hidden;
+}
+
+.quadro-dez__casa {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-right: 2px solid var(--tinta);
+  border-bottom: 2px solid var(--tinta);
+}
+
+.quadro-dez__casa:nth-child(5n) {
+  border-right: 0;
+}
+
+.quadro-dez__casa:nth-child(n + 6) {
+  border-bottom: 0;
+}
+
+.ficha {
+  width: 72%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  animation: ficha-entra 360ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  animation-delay: var(--atraso, 0ms);
+}
+
+.ficha--a {
+  background: var(--ficha-azul);
+  box-shadow: inset 0 0 0 0.18em var(--ficha-azul-clara);
+}
+
+.ficha--b {
+  background: var(--ficha-ambar);
+  box-shadow: inset 0 0 0 0.18em #f7d18a;
+}
+
+.ficha--riscada {
+  border: 0.14em dashed var(--tinta-3);
+  background:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.07em),
+      var(--tinta-3) calc(50% - 0.07em),
+      var(--tinta-3) calc(50% + 0.07em),
+      transparent calc(50% + 0.07em)
+    );
+}
+
+@keyframes ficha-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-0.6em) scale(0.6);
+  }
+}
+
+/* ---------- estados (dominada, travou, praticando): sempre ícone + texto ---------- */
+.estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.estado--dominada {
+  color: var(--acerto);
+}
+
+.estado--travou {
+  color: var(--atencao);
+}
+
+.estado--alvo {
+  color: var(--acao);
+}
+
+/* ---------- régua de domínio ---------- */
+.regua {
+  position: relative;
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--superficie-2);
+}
+
+.regua__preenchida {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--ficha-azul-clara);
+  transition: width 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.regua--dominada .regua__preenchida {
+  background: var(--ficha-azul);
+}
+
+.regua__limiar {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--tinta);
+}
+
+.regua__partida {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--superficie);
+  border: 2px solid var(--tinta-2);
+}

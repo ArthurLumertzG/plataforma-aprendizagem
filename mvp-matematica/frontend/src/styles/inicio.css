@@ -1,0 +1,429 @@
+/* ==========================================================================
+   Página inicial (institucional): para a banca, escolas e famílias.
+   ========================================================================== */
+.inicio {
+  --largura: 1180px;
+  --margem: max(16px, calc((100% - var(--largura)) / 2));
+}
+
+.inicio__topo {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 18px var(--margem);
+}
+
+.inicio__nav {
+  display: flex;
+  gap: 28px;
+  margin-left: auto;
+}
+
+.inicio__nav a {
+  color: var(--tinta-2);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.inicio__nav a:hover {
+  color: var(--tinta);
+  text-decoration: underline;
+}
+
+.inicio__painel {
+  flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+  .inicio__nav {
+    display: none;
+  }
+
+  .inicio__painel {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .inicio__painel {
+    display: none;
+  }
+}
+
+/* ---------- abertura ---------- */
+.abertura {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.02fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 72px);
+  padding: clamp(32px, 6vw, 72px) var(--margem) clamp(56px, 8vw, 104px);
+}
+
+.abertura__texto h1 {
+  max-width: 15ch;
+  font-size: clamp(2.4rem, 4.6vw, 3.6rem);
+  font-weight: 750;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.abertura__lide {
+  max-width: 34rem;
+  margin-top: 24px;
+  color: var(--tinta-2);
+  font-size: 1.2rem;
+  line-height: 1.6;
+}
+
+.abertura__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+@media (max-width: 960px) {
+  .abertura {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- simulador da régua (BKT) ---------- */
+.simulador {
+  display: grid;
+  gap: 18px;
+  padding: clamp(16px, 3vw, 28px);
+  border: 2px solid var(--tinta);
+  border-radius: var(--raio-grande);
+  background-color: var(--papel);
+  background-image: var(--quadriculado);
+  background-size: var(--passo-quadriculado) var(--passo-quadriculado);
+  background-position: -1px -1px;
+}
+
+.simulador__folha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding: 20px 22px;
+  border-radius: var(--raio);
+  background: var(--superficie);
+  box-shadow: var(--sombra-folha);
+  font-family: var(--fonte-crianca);
+}
+
+.simulador__conta {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.simulador__quadros {
+  display: grid;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.simulador__quadros .quadro-dez {
+  width: 11.5em;
+}
+
+.simulador__painel {
+  padding: 20px 22px;
+  border-radius: var(--raio);
+  background: var(--superficie);
+  box-shadow: var(--sombra-folha);
+}
+
+.simulador__titulo {
+  font-weight: 700;
+}
+
+.simulador__regua {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.simulador__regua .regua {
+  height: 14px;
+  border-radius: 7px;
+}
+
+.simulador__regua .regua__preenchida {
+  border-radius: 7px;
+}
+
+.simulador__valor {
+  min-width: 3.2ch;
+  font-size: 1.6rem;
+  font-weight: 750;
+  text-align: right;
+}
+
+.simulador__estado {
+  min-height: 3.1em;
+  margin-top: 12px;
+  color: var(--tinta-2);
+  font-size: 0.98rem;
+}
+
+.simulador__botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.simulador__dominada {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--acerto);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.simulador__dominada .icone {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.simulador__legenda {
+  padding: 0 4px;
+  color: var(--tinta-2);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+/* ---------- seções ---------- */
+.secao {
+  padding: clamp(56px, 8vw, 96px) var(--margem);
+}
+
+.secao__titulo {
+  max-width: 22ch;
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  font-weight: 750;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.secao__lide {
+  max-width: 40rem;
+  margin-top: 16px;
+  font-size: 1.15rem;
+}
+
+/* Passos: uma trilha numérica, porque é de fato uma sequência. */
+.passos {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+  margin-top: 48px;
+}
+
+.passos::before {
+  content: '';
+  position: absolute;
+  top: 26px;
+  left: 26px;
+  right: calc((100% - 96px) / 4 - 26px); /* termina na casa do último passo */
+  height: 3px;
+  background: var(--tinta);
+}
+
+.passo {
+  position: relative;
+}
+
+.passo__numero {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 20px;
+  border: 3px solid var(--tinta);
+  border-radius: 12px;
+  background: var(--superficie);
+  font-family: var(--fonte-crianca);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.passo:last-child .passo__numero {
+  background: var(--ficha-azul);
+  border-color: var(--ficha-azul-escura);
+  color: #fff;
+}
+
+.passo h3 {
+  font-size: 1.2rem;
+  line-height: 1.25;
+}
+
+.passo p {
+  margin-top: 8px;
+  color: var(--tinta-2);
+  max-width: 34ch;
+}
+
+@media (max-width: 900px) {
+  .passos {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .passos::before {
+    top: 26px;
+    bottom: 26px;
+    left: 26px;
+    right: auto;
+    width: 3px;
+    height: auto;
+  }
+
+  .passo {
+    padding-left: 78px;
+  }
+
+  .passo__numero {
+    position: absolute;
+    left: 0;
+    top: -6px;
+  }
+}
+
+/* Cuidados com a criança: texto à esquerda, quatro pontos à direita. */
+.secao--cuidados {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  gap: clamp(32px, 6vw, 88px);
+  background-color: var(--superficie);
+  border-block: 1px solid var(--linha);
+}
+
+.cuidados__intro p {
+  max-width: 34ch;
+  margin-top: 16px;
+  color: var(--tinta-2);
+  font-size: 1.12rem;
+}
+
+.cuidados__mascote {
+  margin-top: 32px;
+}
+
+.cuidados {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px 40px;
+}
+
+.cuidado {
+  padding-top: 18px;
+  border-top: 3px solid var(--tinta);
+}
+
+.cuidado:nth-child(2n) {
+  border-top-color: var(--ficha-ambar);
+}
+
+.cuidado:nth-child(2n + 1) {
+  border-top-color: var(--ficha-azul);
+}
+
+.cuidado h3 {
+  font-size: 1.2rem;
+}
+
+.cuidado p {
+  margin-top: 8px;
+  color: var(--tinta-2);
+}
+
+@media (max-width: 900px) {
+  .secao--cuidados {
+    grid-template-columns: 1fr;
+  }
+
+  .cuidados__mascote {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .cuidados {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+/* Privacidade: faixa em azul-caneta. */
+.secao--privacidade {
+  background: var(--tinta);
+  color: #fff;
+}
+
+.secao--privacidade .secao__lide {
+  color: #d5deeb;
+}
+
+.privacidade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 48px;
+  margin-top: 40px;
+  max-width: 980px;
+}
+
+.privacidade li {
+  display: flex;
+  gap: 12px;
+  font-size: 1.05rem;
+}
+
+.privacidade__icone {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--ficha-ambar);
+}
+
+@media (max-width: 700px) {
+  .privacidade {
+    grid-template-columns: 1fr;
+  }
+}
+
+.secao--honestidade p {
+  max-width: 62ch;
+  margin-top: 16px;
+  color: var(--tinta-2);
+  font-size: 1.12rem;
+}
+
+/* ---------- rodapé ---------- */
+.inicio__rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 40px;
+  padding: 32px var(--margem) 48px;
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-2);
+  font-size: 0.92rem;
+}
+
+.inicio__rodape p {
+  max-width: 60ch;
+}

@@ -1,24 +1,30 @@
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import AlunoPage from './pages/AlunoPage.jsx';
+import InicioPage from './pages/InicioPage.jsx';
 import ProfessorPage from './pages/ProfessorPage.jsx';
+import { MARCA } from './lib/textos.js';
+
+const TITULOS = {
+  '/': `${MARCA}: matemática no passo de cada criança`,
+  '/aluno': `Praticar | ${MARCA}`,
+  '/professor': `Painel do professor | ${MARCA}`,
+};
 
 export default function App() {
-  return (
-    <div className="app">
-      <nav className="nav">
-        <span className="nav-marca">➕ Matemática Adaptativa</span>
-        <div className="nav-links">
-          <NavLink to="/aluno">Aluno</NavLink>
-          <NavLink to="/professor">Professor</NavLink>
-        </div>
-      </nav>
+  const { pathname } = useLocation();
 
-      <Routes>
-        <Route path="/" element={<Navigate to="/aluno" replace />} />
-        <Route path="/aluno" element={<AlunoPage />} />
-        <Route path="/professor" element={<ProfessorPage />} />
-      </Routes>
-    </div>
+  useEffect(() => {
+    document.title = TITULOS[pathname] ?? MARCA;
+  }, [pathname]);
+
+  return (
+    <Routes>
+      <Route path="/" element={<InicioPage />} />
+      <Route path="/aluno" element={<AlunoPage />} />
+      <Route path="/professor" element={<ProfessorPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

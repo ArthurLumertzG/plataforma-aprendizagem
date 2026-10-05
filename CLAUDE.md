@@ -19,6 +19,7 @@ Existe uma **demo local aprovada** para mostrar a personalização funcionando. 
 - Diagnóstico inicial: 2 itens por habilidade, que inicializam `P(L0)`.
 - Motor de recomendação (`backend/src/motor.js`): zona proximal, reforço da habilidade mais frágil, dificuldade pelo P(L) e scaffolding com dica após 2 erros seguidos.
 - Painel do professor com alertas de travamento e o porquê de cada recomendação.
+- Interface "Quadriculado" (nome provisório): página institucional, área da criança com material concreto no scaffolding, leitura em voz alta e ajustes de leitura, e painel com matriz aluno × habilidade e mapa de pré-requisitos. Decisões em `mvp-matematica/README.md`, seção "Interface".
 - Testes por regra e com alunos sintéticos (`npm test` em `backend/`).
 
 Ela é **deliberadamente mais simples** que a arquitetura-alvo descrita no resto deste arquivo. Não "corrija" essas divergências sem combinar com o grupo:
