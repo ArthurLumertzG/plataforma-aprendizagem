@@ -7,7 +7,8 @@
     "postinstall": "cd mvp-matematica/backend && npm install && cd ../frontend && npm install",
     "dev": "concurrently -k -n api,web -c blue,green \"cd mvp-matematica/backend && npm run dev\" \"cd mvp-matematica/frontend && npm run dev\"",
     "test": "cd mvp-matematica/backend && npm test",
-    "build": "cd mvp-matematica/frontend && npm run build"
+    "build": "cd mvp-matematica/frontend && npm run build",
+    "avaliar-modelo": "node mvp-matematica/backend/scripts/avaliar-modelo.js"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

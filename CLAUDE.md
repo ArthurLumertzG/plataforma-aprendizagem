@@ -21,6 +21,7 @@ Existe uma **demo local aprovada** para mostrar a personalização funcionando. 
 - Painel do professor com alertas de travamento e o porquê de cada recomendação.
 - Métricas da pesquisa aplicada (`backend/src/metricas.js`): transparência da amostra, domínio confirmado (P(L) ≥ limiar + 2 acertos seguidos, só no painel), ganho estimado e taxa de acerto recente ao lado do acerto previsto, com alerta de divergência, tempo até o domínio (mediana da turma, sempre com quantos chegaram) e retenção ao voltar a uma habilidade dominada. Detalhes em `mvp-matematica/README.md`, seção "Métricas do painel".
 - Eventos com auditoria: `versao_parametros` do BKT, dificuldade servida e regra do motor que escolheu a questão.
+- Acurácia do modelo (`backend/src/avaliacao.js` + `npm run avaliar-modelo`): AUC com intervalo, Brier contra referência, calibração, por habilidade e por regra. Roteiro do relatório do piloto em `docs/relatorio-piloto.md`.
 - Interface "Quadriculado" (nome provisório): página institucional, área da criança com material concreto no scaffolding, leitura em voz alta e ajustes de leitura, e painel com matriz aluno × habilidade e mapa de pré-requisitos. Decisões em `mvp-matematica/README.md`, seção "Interface".
 - Testes por regra e com alunos sintéticos (`npm test` em `backend/`).
 
@@ -149,6 +150,7 @@ src/
 data/seeds/                  # grafo inicial + itens de exemplo
 docs/adr/                    # um arquivo por ADR
 docs/diagramas/
+docs/relatorio-piloto.md     # roteiro dos resultados do piloto (já existe)
 ```
 
 Respeite as fronteiras entre módulos. O motor de recomendação lê `P(L)` e não calcula BKT. O modelo do aluno não escolhe itens. Route Handlers só orquestram: a lógica de domínio fica em `modules/`.
@@ -175,7 +177,7 @@ Soma até 10 + Subtração até 10 ─→ Valor posicional (dezena/unidade) ─�
 5. **Cliente:** app da criança simplificado + painel básico. Fluxo ponta a ponta demonstrável.
 6. **Piloto:** grupo pequeno real, com pré/pós-teste, comparado com a recomendação manual de um professor.
 
-Na demo (`mvp-matematica/`), as fases 2 e 3 estão cobertas, exceto a repetição espaçada e a progressão por sucesso consistente. Antes do piloto, falta medir a acurácia do modelo (AUC/calibração de P(L) contra o acerto seguinte) e reportar o ganho de **todos** os alunos que começaram, nunca só de quem completou. As fases 1, 4 e 5 existem em versão simplificada (ver tabela em "Estado atual").
+Na demo (`mvp-matematica/`), as fases 2 e 3 estão cobertas, exceto a repetição espaçada e a progressão por sucesso consistente. Antes de apresentar resultados do piloto, rode `npm run avaliar-modelo` no banco do piloto e siga `docs/relatorio-piloto.md`: ganho de **todos** os alunos que começaram, nunca só de quem completou. O engajamento (conclusão de sessão) ainda não é medido, porque depende da entidade Sessão. As fases 1, 4 e 5 existem em versão simplificada (ver tabela em "Estado atual").
 
 ## Privacidade por design (checklist para todo código novo)
 

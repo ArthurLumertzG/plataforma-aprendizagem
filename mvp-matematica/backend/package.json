@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node src/server.js",
     "start": "node src/server.js",
-    "test": "node --test src/*.test.js"
+    "test": "node --test src/*.test.js",
+    "avaliar-modelo": "node scripts/avaliar-modelo.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",

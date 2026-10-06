@@ -36,6 +36,13 @@ Testes do núcleo estatístico:
 npm test           # da raiz (ou dentro de backend/)
 ```
 
+Acurácia do modelo sobre o banco local (ver "Acurácia do modelo" abaixo):
+
+```bash
+npm run avaliar-modelo            # da raiz (ou dentro de backend/)
+npm run avaliar-modelo -- --json  # o mesmo relatório em JSON
+```
+
 ## Publicar a interface na Vercel (opcional)
 
 O backend usa SQLite em arquivo, então **ele não roda na Vercel** (o filesystem das
@@ -186,6 +193,38 @@ acertar muito em questões fáceis demais não é aprender.
 Os limiares (2 acertos, 10 respostas, 0,3 e 5) são **provisórios**, sem validação
 pedagógica. São constantes no topo de `metricas.js`.
 
+### Acurácia do modelo
+
+A fórmula do BKT estar certa não garante que P(L) descreva as crianças. Antes de
+apresentar qualquer resultado do piloto, é preciso mostrar que P(L) alto vem antes de
+acerto e P(L) baixo vem antes de erro. `npm run avaliar-modelo` faz isso com
+`backend/src/avaliacao.js` (funções puras) sobre **todos** os alunos do banco:
+
+- **Previsão:** para cada resposta de prática, P(acerto) = P(L)(1−S) + (1−P(L))G com
+  o P(L) de **antes** da resposta. O teste rápido fica de fora, porque é ele que
+  define o P(L0).
+- **AUC** com intervalo de 95% (Hanley e McNeil): 0,5 é chute, 1 é perfeito. Com
+  menos de 5 acertos ou 5 erros o relatório diz "poucos dados" em vez de dar um
+  intervalo, que sairia degenerado ("1,00 a 1,00").
+- **Brier** contra a referência de prever sempre a taxa geral. Um modelo útil fica
+  abaixo dela.
+- **Calibração** em 5 faixas: o previsto e o real precisam ser parecidos.
+- **Por habilidade e por regra do motor**, usando a regra gravada em cada evento. É
+  onde aparece o modelo moldando os próprios dados.
+- **Versões dos parâmetros** gravadas nos eventos, com aviso se houver mais de uma.
+
+Os testes com alunos sintéticos (`avaliacao.test.js`) mostram que a métrica distingue
+os casos: crianças que se comportam como o BKT supõe dão AUC perto de 0,75, Brier
+abaixo da referência e boa calibração. Crianças que respondem ao acaso dão AUC perto
+de 0,5 e Brier acima da referência. O intervalo supõe respostas independentes, o que
+não vale (cada criança responde várias vezes), então o intervalo real é mais largo.
+Abrir o banco aplica a migração de esquema, como subir a API.
+
+O roteiro para escrever os resultados do piloto, com o checklist contra o viés de
+sobrevivência, está em [`docs/relatorio-piloto.md`](../docs/relatorio-piloto.md).
+
+### Fora do painel
+
 Não há XP, sequência de dias nem ranking, e isso é intencional: no Duolingo, XP fixo
 por resposta faz repetir o fácil, e a sequência de dias gera ansiedade. Se um dia
 houver pontos, eles devem ser proporcionais ao ganho de P(L) da resposta, nunca um
@@ -274,9 +313,12 @@ mvp-matematica/
 │   │   ├── bkt.js         # modelo do aluno: BKT, P(L0) e recálculo a partir dos eventos
 │   │   ├── motor.js       # motor de recomendação: diagnóstico + 4 regras
 │   │   ├── metricas.js    # métricas do painel: domínio confirmado, ganho, divergência, tempo até o domínio, retenção, amostra
-│   │   ├── *.test.js      # testes do BKT, de cada regra, das métricas e com alunos sintéticos
+│   │   ├── avaliacao.js   # acurácia do modelo: AUC, Brier, calibração, por habilidade e por regra
+│   │   ├── *.test.js      # testes do BKT, de cada regra, das métricas, da avaliação e com alunos sintéticos
 │   │   ├── routes.js
 │   │   └── server.js
+│   ├── scripts/
+│   │   └── avaliar-modelo.js  # relatório de acurácia sobre o banco local
 │   └── package.json
 ├── frontend/
 │   ├── src/
@@ -300,6 +342,5 @@ Autenticação real, consentimento parental/LGPD, calibração dos parâmetros d
 dados reais, uso do tempo de resposta e das dicas como força da evidência (decisão
 ainda em aberto), repetição espaçada, progressão de dificuldade por sucesso
 consistente, modo offline e deploy em nuvem. Das métricas da pesquisa aplicada, ainda
-faltam a acurácia do modelo (AUC e calibração, obrigatória antes de apresentar
-resultados do piloto) e o engajamento (depende da entidade Sessão). A retenção já é
+falta o engajamento (conclusão de sessão e abandono), que depende da entidade Sessão. A retenção já é
 medida, mas só ganha o sentido de "esquecimento" quando houver repetição espaçada. São iterações futuras, não omissões.
