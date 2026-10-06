@@ -59,6 +59,13 @@ backend já rodando em `npm run dev`:
 npx cloudflared tunnel --url http://localhost:3001
 ```
 
+Se ele ficar repetindo `Failed to dial a quic connection`, a sua rede bloqueia UDP
+(comum em redes de faculdade e empresa). Force o túnel por TCP:
+
+```bash
+npx cloudflared tunnel --protocol http2 --url http://localhost:3001
+```
+
 Copie a URL `https://....trycloudflare.com` que ele imprime para `VITE_API_URL` e
 refaça o deploy. A demo fica no ar enquanto o seu computador e o túnel estiverem
 ligados. Apontar `VITE_API_URL` para `http://localhost:3001` também funciona, mas
