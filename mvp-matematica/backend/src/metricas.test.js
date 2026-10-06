@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { PARAMETROS, LIMIAR_DOMINIO, atualizarPL, probabilidadeAcerto, recalcularDominio } from './bkt.js';
+import {
+  PARAMETROS,
+  LIMIAR_DOMINIO,
+  atualizarPL,
+  probabilidadeAcerto,
+  recalcularDominio,
+} from './bkt.js';
 import {
   ACERTOS_PARA_DOMINIO,
   DIVERGENCIA,
@@ -99,7 +105,13 @@ test('ganhoAprendizagem: P(L) atual − P(L0), e null sem ponto de partida', () 
 
 test('desempenhoRecente: sem prática não há taxa nem alerta', () => {
   const r = recente(sequencia(H.id, 'CC', 'diagnostico'));
-  assert.deepEqual(r, { respostas: 0, acertos: 0, taxa: null, acerto_esperado: null, divergente: false });
+  assert.deepEqual(r, {
+    respostas: 0,
+    acertos: 0,
+    taxa: null,
+    acerto_esperado: null,
+    divergente: false,
+  });
 });
 
 test('desempenhoRecente: só as últimas respostas da janela entram na taxa', () => {
@@ -117,7 +129,10 @@ test('desempenhoRecente: acerto esperado é a média da previsão antes de cada 
 
 test('desempenhoRecente: não alerta com poucas respostas, por maior que seja a diferença', () => {
   const diagnosticoAlto = sequencia(H.id, 'CC', 'diagnostico'); // P(L0) = 0,85
-  const r = recente([...diagnosticoAlto, ...sequencia(H.id, 'E'.repeat(DIVERGENCIA.RESPOSTAS_MIN - 1))]);
+  const r = recente([
+    ...diagnosticoAlto,
+    ...sequencia(H.id, 'E'.repeat(DIVERGENCIA.RESPOSTAS_MIN - 1)),
+  ]);
   assert.ok(r.acerto_esperado - r.taxa > DIVERGENCIA.DIFERENCA);
   assert.equal(r.divergente, false);
 });
@@ -246,11 +261,7 @@ test('retencaoPorHabilidade: prática seguida na mesma habilidade não é volta'
 });
 
 test('retencaoPorHabilidade: o teste rápido no meio não interrompe a prática', () => {
-  const eventos = [
-    ...sequencia(A.id, 'CC'),
-    evento(B.id, true, 'diagnostico'),
-    evento(A.id, true),
-  ];
+  const eventos = [...sequencia(A.id, 'CC'), evento(B.id, true, 'diagnostico'), evento(A.id, true)];
   assert.deepEqual(retencaoPorHabilidade(eventos, trajetoriaDe(eventos)), {});
 });
 

@@ -387,7 +387,12 @@ export default function AlunoPage() {
               </aside>
             )}
 
-            <div className="alternativas" role="group" aria-label="Escolha a resposta">
+            <div
+              className="alternativas"
+              role="group"
+              aria-label="Escolha a resposta"
+              style={{ '--colunas': Math.min(4, questao.alternativas.length) }}
+            >
               {questao.alternativas.map((alt) => {
                 let estado = '';
                 if (feedback?.tipo === 'diagnostico') {
@@ -402,7 +407,9 @@ export default function AlunoPage() {
                   <button
                     key={alt}
                     type="button"
-                    className={`alternativa ${estado ? `alternativa--${estado}` : ''}`}
+                    className={`alternativa ${/^\d+$/.test(alt) ? '' : 'alternativa--texto'} ${
+                      estado ? `alternativa--${estado}` : ''
+                    }`}
                     onClick={() => responder(alt)}
                     disabled={Boolean(feedback) || enviando || carregando}
                   >

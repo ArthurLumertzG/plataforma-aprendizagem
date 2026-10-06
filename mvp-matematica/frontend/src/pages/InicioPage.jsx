@@ -105,7 +105,7 @@ const PASSOS = [
   {
     titulo: 'Teste rápido',
     texto:
-      'Oito questões, duas por habilidade, mostram de onde a criança parte. Ninguém começa do zero nem é tratado como quem já sabe tudo.',
+      'Uma questão por habilidade, seguindo a trilha: quem erra uma etapa não é perguntado sobre o que depende dela. Ninguém começa do zero nem é tratado como quem já sabe tudo.',
   },
   {
     titulo: 'Uma régua por habilidade',
@@ -115,7 +115,7 @@ const PASSOS = [
   {
     titulo: 'O próximo exercício',
     texto:
-      'Regras pedagógicas escolhem a questão: a habilidade que já tem base para avançar, um reforço na mais frágil e, depois de dois erros seguidos, uma questão mais fácil com dica e material de apoio.',
+      'Regras pedagógicas escolhem a questão: a habilidade que já tem base para avançar, com a dificuldade subindo a cada acerto consistente; revisões espaçadas do que já foi aprendido; e, depois de dois erros seguidos, uma questão mais fácil com dica e material de apoio.',
   },
   {
     titulo: 'O professor vê o porquê',

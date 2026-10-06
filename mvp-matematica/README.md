@@ -26,7 +26,7 @@ Depois abra <http://localhost:5173>:
   privacidade e limites da evidência). Tem um simulador da régua de domínio (BKT) que
   não usa a API.
 - **`/aluno`**: escolha um dos 5 perfis (ou cadastre um apelido novo) e responda às
-  questões. Sem login. Todo aluno começa pelo **teste rápido** de 8 questões.
+  questões. Sem login. Todo aluno começa pelo **teste rápido** (até 11 questões).
 - **`/professor`**: senha padrão **`professor123`** (ou o valor de `SENHA_PROFESSOR`
   no ambiente do backend). O painel se atualiza sozinho a cada 3 segundos.
 
@@ -86,14 +86,17 @@ dados são de alunos fictícios — não use dados reais de crianças nesta demo
 Para cada par (aluno, habilidade) o sistema estima um único número, **P(L)**: a
 probabilidade de que a criança domine aquela habilidade.
 
-**1. Teste rápido (diagnóstico inicial).** O aluno novo responde 8 itens-âncora, 2 por
-habilidade (um de dificuldade 1 e um de dificuldade 2), sempre na mesma ordem. Nessa
-fase a tela não mostra certo/errado, porque é medição, não aula. As respostas definem o
-ponto de partida **P(L0)** de cada habilidade: partindo de 0,3, aplicamos só a parte
-de evidência do BKT (pondera chute e distração), sem a chance de aprender, já que o
-teste não ensina. O resultado fica preso entre **0,10 e 0,85**: com 2 itens não dá
-para cravar que a criança domina ou desconhece a habilidade. Sem o teste, toda
-criança começaria em 0,3, e quem já sabe somar teria de provar isso de novo.
+**1. Teste rápido (diagnóstico inicial).** O aluno novo responde **1 item-âncora por
+habilidade**, de dificuldade média, na ordem do grafo. Quem erra uma habilidade **não é
+perguntado sobre o que depende dela**: se não soma, não faz sentido perguntar sobre soma
+passando do 10. Assim o teste tem no máximo 11 itens (dentro dos 10 a 15 do produto) e
+fica curto para quem tem mais dificuldade: quem erra as três raízes responde só 3. A
+habilidade pulada fica com o P(L0) padrão, sem evidência, e o grafo garante que ela só
+será praticada depois dos pré-requisitos. Nessa fase a tela não mostra certo/errado,
+porque é medição, não aula. As respostas definem o ponto de partida **P(L0)**:
+partindo de 0,3, aplicamos só a parte de evidência do BKT (pondera chute e distração),
+sem a chance de aprender, já que o teste não ensina. O resultado fica preso entre
+**0,10 e 0,85**. Um acerto leva a 0,66 (acima do limiar) e um erro, a 0,10.
 
 **2. Atualização a cada resposta.** Na prática, P(L) da habilidade é recalculado pela
 fórmula do **Bayesian Knowledge Tracing**, que pondera o acerto ou erro pela chance de
@@ -114,19 +117,44 @@ marcada como `diagnostico` ou `pratica`, com `finalidade = 'pedagogica'`). O dom
 o P(L) antes → depois de cada resposta sem duplicar dados e, quando houver modo
 offline, sincronizar vira "juntar listas de eventos e recalcular".
 
-**4. Escolha da próxima questão** (`motor.js`): determinística e explicável.
+**4. Escolha da próxima questão** (`motor.js`): determinística e explicável. Para o
+motor, uma habilidade está **consolidada** quando P(L) passou do limiar (0,6) **e** a
+criança chegou ao nível mais difícil dela. As regras são consultadas nesta ordem, e a
+primeira que se aplica decide:
 
-1. **Zona proximal:** a primeira habilidade ainda não dominada (P(L) < 0,6) cujos
-   pré-requisitos já estão dominados.
-2. **Reforço:** se tudo já foi dominado, a habilidade mais frágil.
-3. **Dificuldade:** dentro da habilidade, a questão cuja dificuldade (1 a 3) mais se
-   aproxima do P(L) atual, sem repetir a última respondida.
-4. **Scaffolding:** após **2 erros seguidos** na mesma habilidade, volta para a
-   dificuldade 1 e **mostra a dica** da questão. O painel do professor marca a
-   habilidade com ⚠️.
+1. **Scaffolding:** após **2 erros seguidos** na habilidade que estava praticando, a
+   criança **não sai dela**: recebe uma questão de dificuldade 1 com a **dica** e o
+   material de apoio, e desce um nível na escada. O painel marca a habilidade com ⚠️.
+2. **Revisão espaçada:** uma habilidade consolidada que ficou **8 respostas** sem
+   aparecer volta para uma revisão, no nível em que está. Cada revisão acertada dobra
+   o intervalo (8 → 16 → 32); um erro volta ao primeiro, e a queda de P(L) pode
+   devolver a habilidade à trilha. Enquanto há algo novo para aprender, as revisões
+   vêm **uma por vez, com 2 respostas de trilha entre elas**: sem isso, as habilidades
+   que o teste rápido consolidou juntas venceriam juntas e viriam em bloco. O intervalo
+   é medido em respostas, e não em dias, porque na demo tudo acontece em minutos.
+3. **Zona proximal e progressão:** a primeira habilidade ainda não consolidada cujos
+   pré-requisitos estão consolidados. Dentro dela, a dificuldade segue uma **escada**:
+   começa no nível indicado pelo P(L0) (abaixo de 0,4 → 1; até 0,6 → 2; acima → 3) e
+   **sobe um nível a cada 2 acertos seguidos** no nível atual. Acertos em questões mais
+   fáceis, como as do scaffolding, não contam. Quando P(L) já passou do limiar, mas a
+   escada ainda não chegou ao topo, a regra aparece como **progressão**: passar do
+   limiar com duas questões fáceis não basta para avançar no grafo.
+4. **Reforço:** com tudo consolidado e nenhuma revisão vencida, a habilidade mais
+   frágil.
 
-A API devolve a regra aplicada junto com a questão. A tela do aluno mostra isso no
-bloco "Por que esta questão?", útil para a demonstração.
+Dentro do nível escolhido, a questão é a que a criança viu há mais tempo (ou nunca
+viu), sem repetir a última.
+
+**Divergência em relação ao documento do produto:** lá a zona proximal vem antes da
+revisão. Aqui a revisão vencida vem antes porque, do contrário, ela nunca aconteceria
+enquanto houvesse algo novo para aprender, e o objetivo dela é justamente intercalar.
+O scaffolding vem antes de tudo porque a regra dele é "não avançar": a criança travada
+não é tirada da habilidade nem por uma revisão. Quem o teste rápido pôs acima do limiar
+começa no topo da escada e não refaz o que mostrou saber. A revisão espaçada confere
+isso depois.
+
+A API devolve a regra aplicada junto com a questão, com o nível na escada. A tela do
+aluno mostra isso no bloco "Por que esta questão?", útil para a demonstração.
 
 **5. Auditoria do próprio modelo.** Como o motor decide o que a criança vê, os dados
 já nascem enviesados por ele. Por isso cada evento grava também a versão dos
@@ -240,10 +268,14 @@ provisório e fica numa constante só (`MARCA`, em `frontend/src/lib/textos.js`)
 
 - **A questão vira material concreto** (`lib/representacao.js`). O frontend interpreta
   o texto do enunciado (o seed não muda): figuras viram objetos que dá para tocar e
-  numerar, sequências viram casas com uma vazia e contas viram `a + b = ?`. Um enunciado
-  que não casa com nenhum padrão aparece como texto puro.
+  numerar, os símbolos ⚀–⚅ viram dados desenhados no padrão de sempre (subitização),
+  sequências viram casas com uma vazia e contas viram `a + b = ?` ou `a + ? = c`.
+  Alternativas que não são números (grupos de figuras, nomes) ganham letra menor. Um
+  enunciado que não casa com nenhum padrão aparece como texto puro. No painel do
+  professor, os dados aparecem por extenso ("dados: 4 e 3").
 - **O material de apoio só aparece no scaffolding**: quadros de dez para soma e
-  subtração e trilha numérica para "depois do N". Se ele aparecesse sempre, a criança
+  subtração, casas tracejadas para "quanto falta", o número em quadros cheios (um por
+  dezena) no valor posicional e trilha numérica para "depois do N". Se ele aparecesse sempre, a criança
   acertaria contando as fichas, e o BKT leria esse acerto como domínio da conta.
   Na soma que passa de 10, a segunda cor completa o primeiro quadro antes de ir para o
   próximo, que é a estratégia "complete o 10" das dicas. O apoio continua visível
@@ -281,13 +313,25 @@ mesma forma que a criança.
 
 ## Conteúdo
 
-4 habilidades encadeadas por pré-requisito e 20 questões (5 por habilidade,
-dificuldade 1 a 3, cada uma com uma dica), definidas em `backend/src/seed-data.js`:
+11 habilidades de senso numérico encadeadas por pré-requisito e 88 questões (8 por
+habilidade: 3 de dificuldade 1, 3 de 2 e 2 de 3, todas com dica), definidas em
+`backend/src/seed-data.js`. O grafo segue o rascunho do `CLAUDE.md` e **ainda precisa
+da validação dos conteudistas**:
 
 ```
-contagem_ate_10 ─┬─→ adicao_ate_10 ────┬─→ adicao_com_reagrupamento
-                 └─→ subtracao_ate_10 ─┘
+subitizacao ─────┐
+contagem_ate_10 ─┼─→ numero_quantidade ─┬─→ comparacao
+numerais_ate_20 ─┘                      └─→ composicao_ate_10 ─→ adicao_ate_10 ─→ subtracao_ate_10
+
+adicao_ate_10 + subtracao_ate_10 ─→ valor_posicional ─┬─→ adicao_com_reagrupamento (até 20)
+                                                      └─→ subtracao_com_reagrupamento (até 20)
 ```
+
+Ficou de fora a correspondência um a um do rascunho: em múltipla escolha, sem
+arrastar objetos, ela se confunde com contagem. Na subitização, sem tempo de exibição
+na tela, não dá para impedir que a criança conte; os padrões de dado favorecem o
+reconhecimento. Ao escrever questões, evite "mais" em frases com dois números que não
+são soma: o parser da interface lê isso como adição e mostraria o apoio errado.
 
 ## API
 
@@ -308,10 +352,10 @@ contagem_ate_10 ─┬─→ adicao_ate_10 ────┬─→ adicao_com_reag
 mvp-matematica/
 ├── backend/
 │   ├── src/
-│   │   ├── seed-data.js   # 4 habilidades, 5 alunos, 20 questões
+│   │   ├── seed-data.js   # 11 habilidades, 5 alunos, 88 questões
 │   │   ├── db.js          # SQLite: esquema, migração, seed e eventos
 │   │   ├── bkt.js         # modelo do aluno: BKT, P(L0) e recálculo a partir dos eventos
-│   │   ├── motor.js       # motor de recomendação: diagnóstico + 4 regras
+│   │   ├── motor.js       # motor: teste rápido, scaffolding, revisão, zona proximal/progressão, reforço
 │   │   ├── metricas.js    # métricas do painel: domínio confirmado, ganho, divergência, tempo até o domínio, retenção, amostra
 │   │   ├── avaliacao.js   # acurácia do modelo: AUC, Brier, calibração, por habilidade e por regra
 │   │   ├── *.test.js      # testes do BKT, de cada regra, das métricas, da avaliação e com alunos sintéticos
@@ -340,7 +384,7 @@ fictícios, nada é migrado: as respostas já dadas se perdem.
 
 Autenticação real, consentimento parental/LGPD, calibração dos parâmetros do BKT com
 dados reais, uso do tempo de resposta e das dicas como força da evidência (decisão
-ainda em aberto), repetição espaçada, progressão de dificuldade por sucesso
-consistente, modo offline e deploy em nuvem. Das métricas da pesquisa aplicada, ainda
-falta o engajamento (conclusão de sessão e abandono), que depende da entidade Sessão. A retenção já é
-medida, mas só ganha o sentido de "esquecimento" quando houver repetição espaçada. São iterações futuras, não omissões.
+ainda em aberto), revisão espaçada medida em dias (hoje é em respostas), modo offline
+e deploy em nuvem. Das métricas da pesquisa aplicada, ainda falta o engajamento
+(conclusão de sessão e abandono), que depende da entidade Sessão. São iterações
+futuras, não omissões.

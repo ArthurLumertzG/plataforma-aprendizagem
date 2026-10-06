@@ -65,7 +65,13 @@ export function ganhoAprendizagem(pL, pL0) {
  * @param {Record<number, {p_l_antes: number}>} trajetoria De recalcularDominio.
  * @param {object} params Parâmetros BKT da habilidade (parametrosDa).
  */
-export function desempenhoRecente(eventos, trajetoria, habilidadeId, params, janela = JANELA_RECENTE) {
+export function desempenhoRecente(
+  eventos,
+  trajetoria,
+  habilidadeId,
+  params,
+  janela = JANELA_RECENTE,
+) {
   const recentes = praticaDa(eventos, habilidadeId).slice(-janela);
   const respostas = recentes.length;
   if (respostas === 0) {
@@ -75,8 +81,10 @@ export function desempenhoRecente(eventos, trajetoria, habilidadeId, params, jan
   const acertos = recentes.filter((e) => e.correto).length;
   const taxa = acertos / respostas;
   const acertoEsperado =
-    recentes.reduce((soma, e) => soma + probabilidadeAcerto(trajetoria[e.id].p_l_antes, params), 0) /
-    respostas;
+    recentes.reduce(
+      (soma, e) => soma + probabilidadeAcerto(trajetoria[e.id].p_l_antes, params),
+      0,
+    ) / respostas;
 
   return {
     respostas,

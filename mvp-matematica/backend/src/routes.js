@@ -23,10 +23,12 @@ import {
   transparenciaAmostra,
 } from './metricas.js';
 import {
+  ACERTOS_PARA_SUBIR,
   ERROS_PARA_SCAFFOLDING,
+  INTERVALOS_REVISAO,
   contarErrosSeguidos,
+  estadoDasHabilidades,
   estadoDiagnostico,
-  itensDoDiagnostico,
   selecionarProximaQuestao,
 } from './motor.js';
 import {
@@ -61,7 +63,7 @@ function estadoDoAluno(alunoId) {
   const questoes = listarQuestoes();
   const eventos = eventosDoAluno(alunoId);
   const { dominio, pL0, trajetoria } = recalcularDominio(eventos, habilidades);
-  const diagnostico = estadoDiagnostico(eventos, itensDoDiagnostico(habilidades, questoes));
+  const diagnostico = estadoDiagnostico(eventos, habilidades, questoes);
   return { habilidades, questoes, eventos, dominio, pL0, trajetoria, diagnostico };
 }
 
@@ -70,8 +72,9 @@ function estadoDoAluno(alunoId) {
  * `acima_do_limiar` é o que o motor usa; `dominada` é o domínio confirmado
  * (limiar + acertos seguidos), o único que o painel mostra como "dominada".
  */
-function resumoDominio({ habilidades, dominio, pL0, eventos, trajetoria, diagnostico }) {
+function resumoDominio({ habilidades, questoes, dominio, pL0, eventos, trajetoria, diagnostico }) {
   const retencao = retencaoPorHabilidade(eventos, trajetoria);
+  const motor = estadoDasHabilidades({ dominio, pL0, habilidades, questoes, eventos });
   return habilidades.map((h) => {
     const errosSeguidos = contarErrosSeguidos(eventos, h.id);
     const acertos = acertosSeguidos(eventos, h.id);
@@ -95,6 +98,11 @@ function resumoDominio({ habilidades, dominio, pL0, eventos, trajetoria, diagnos
       retencao: retencao[h.id] ?? { retornos: 0, acertos: 0 },
       erros_seguidos: errosSeguidos,
       travou: errosSeguidos >= ERROS_PARA_SCAFFOLDING,
+      // Como o motor enxerga a habilidade: escada de dificuldade e revisão espaçada.
+      nivel: motor[h.id].nivel,
+      nivel_maximo: motor[h.id].nivel_maximo,
+      consolidada: motor[h.id].consolidada,
+      revisao: motor[h.id].revisao,
     };
   });
 }
@@ -163,7 +171,7 @@ router.get('/alunos/:id/historico', exigeAluno, (req, res) => {
 });
 
 router.get('/alunos/:id/proxima-questao', exigeAluno, (req, res) => {
-  const { habilidades, questoes, eventos, dominio, diagnostico } = estadoDoAluno(req.aluno.id);
+  const { habilidades, questoes, eventos, dominio, pL0, diagnostico } = estadoDoAluno(req.aluno.id);
   const progresso = { respondidos: diagnostico.respondidos, total: diagnostico.total };
 
   // Cold start: enquanto o teste rápido não termina, só saem itens-âncora.
@@ -185,6 +193,7 @@ router.get('/alunos/:id/proxima-questao', exigeAluno, (req, res) => {
 
   const { questao, explicacao, mostrar_dica } = selecionarProximaQuestao({
     dominio,
+    pL0,
     habilidades,
     questoes,
     eventos,
@@ -291,6 +300,8 @@ router.get('/professor/painel', (req, res) => {
     janela_recente: JANELA_RECENTE,
     divergencia: DIVERGENCIA,
     erros_para_scaffolding: ERROS_PARA_SCAFFOLDING,
+    acertos_para_subir: ACERTOS_PARA_SUBIR,
+    intervalos_revisao: INTERVALOS_REVISAO,
     limites_p_l0: LIMITES_P_L0,
     parametros: PARAMETROS,
     versao_parametros: VERSAO_PARAMETROS,

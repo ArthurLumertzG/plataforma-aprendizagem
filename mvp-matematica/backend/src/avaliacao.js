@@ -53,7 +53,7 @@ export function auc(previsoes) {
   // Posto médio de cada previsão (empates dividem o posto).
   const ordenadas = [...previsoes].sort((a, b) => a.previsto - b.previsto);
   let somaPostosAcertos = 0;
-  for (let i = 0; i < ordenadas.length; ) {
+  for (let i = 0; i < ordenadas.length;) {
     let j = i;
     while (j < ordenadas.length && ordenadas[j].previsto === ordenadas[i].previsto) j++;
     const postoMedio = (i + 1 + j) / 2;

@@ -421,6 +421,31 @@
   color: var(--ficha-azul);
 }
 
+/* Dados da subitização: pontos no padrão de sempre, para reconhecer sem contar. */
+.dados {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8em;
+}
+
+.dado {
+  width: 5.2em;
+  height: 5.2em;
+  animation: ficha-entra 360ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  animation-delay: var(--atraso, 0ms);
+}
+
+.dado__face {
+  fill: var(--superficie);
+  stroke: var(--tinta);
+  stroke-width: 3;
+}
+
+.dado__ponto {
+  fill: var(--tinta);
+}
+
 .conta {
   display: flex;
   flex-wrap: wrap;
@@ -545,7 +570,7 @@
 /* ---------- alternativas ---------- */
 .alternativas {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--colunas, 4), minmax(0, 1fr));
   gap: 0.6em;
 }
 
@@ -553,6 +578,15 @@
   .alternativas {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Alternativas que não são números: grupos de figuras ("🍎🍎🍎") ou palavras. */
+.alternativa.alternativa--texto {
+  padding: 0.35em 0.4em;
+  font-size: 1.25em;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
 }
 
 .alternativa {

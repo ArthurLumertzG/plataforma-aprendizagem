@@ -6,7 +6,14 @@ import Icone from '../components/Icone.jsx';
 import Logo from '../components/Logo.jsx';
 import MapaHabilidades from '../components/MapaHabilidades.jsx';
 import Regua from '../components/Regua.jsx';
-import { NOME_DA_REGRA, corDoAluno, horario, inicial, pct } from '../lib/textos.js';
+import {
+  NOME_DA_REGRA,
+  corDoAluno,
+  enunciadoParaAdulto,
+  horario,
+  inicial,
+  pct,
+} from '../lib/textos.js';
 
 const INTERVALO_POLLING_MS = 3000;
 const CHAVE_SENHA = 'senha-professor';
@@ -365,6 +372,15 @@ function Matriz({ alunos, turma, limiar, acertosParaDominio, selecionado, aoSele
   );
 }
 
+/** Quando a revisão espaçada da habilidade vence, em respostas de outras habilidades. */
+function RevisaoEm({ revisao }) {
+  if (revisao.desde === null) return null;
+  const faltam = revisao.intervalo - revisao.desde;
+  const quando =
+    faltam <= 0 ? 'revisão agora' : `revisão em ${plural(faltam, 'resposta', 'respostas')}`;
+  return <>, {quando}</>;
+}
+
 /**
  * Domínio, ganho e acertos recentes lado a lado. Nenhum deles sozinho diz se a
  * criança está aprendendo: acerto alto com questões fáceis demais não é domínio.
@@ -403,6 +419,10 @@ function LadoALado({ aluno, janela, acertosParaDominio }) {
                     dominou em {plural(h.ate_dominio, 'resposta', 'respostas')}
                   </span>
                 )}
+                <span className="lado-a-lado__extra">
+                  nível {h.nivel} de {h.nivel_maximo}
+                  {h.consolidada && <RevisaoEm revisao={h.revisao} />}
+                </span>
                 {h.retencao.retornos > 0 && (
                   <span className="lado-a-lado__extra">
                     ao voltar, acertou {h.retencao.acertos} de {h.retencao.retornos}
@@ -461,7 +481,9 @@ function DetalheAluno({ aluno, recomendacao, janela, acertosParaDominio }) {
             </p>
             <p className="recomendacao__motivo">{explicacao.motivo}</p>
             {recomendacao.questao && (
-              <p className="recomendacao__enunciado">“{recomendacao.questao.enunciado}”</p>
+              <p className="recomendacao__enunciado">
+                “{enunciadoParaAdulto(recomendacao.questao.enunciado)}”
+              </p>
             )}
           </div>
         ) : (
@@ -483,7 +505,8 @@ function DetalheAluno({ aluno, recomendacao, janela, acertosParaDominio }) {
       <section className="detalhe__bloco">
         <h3>Mapa de habilidades</h3>
         <p className="detalhe__nota">
-          Cada habilidade só é praticada quando as de cima já passaram do limiar.
+          Cada habilidade só é praticada quando as de cima estão consolidadas: passaram do
+          limiar e chegaram ao nível mais difícil.
         </p>
         <div className="detalhe__mapa">
           <MapaHabilidades habilidades={aluno.dominio} recomendada={explicacao?.habilidade_id} />
@@ -505,7 +528,7 @@ function DetalheAluno({ aluno, recomendacao, janela, acertosParaDominio }) {
                     <Icone nome={r.correto ? 'certo' : 'fechar'} tamanho={16} />
                     {r.correto ? 'Acertou' : 'Errou'}
                   </span>
-                  <span className="historico__enunciado">{r.enunciado}</span>
+                  <span className="historico__enunciado">{enunciadoParaAdulto(r.enunciado)}</span>
                   <span className="historico__meta">
                     {horario(r.criado_em)}, {r.tipo === 'diagnostico' ? 'teste rápido' : 'prática'},{' '}
                     {nomeHabilidade}

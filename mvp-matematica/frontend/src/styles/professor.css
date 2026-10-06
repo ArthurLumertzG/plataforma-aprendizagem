@@ -334,6 +334,23 @@
   width: 190px;
 }
 
+/* Com muitas habilidades a matriz rola na horizontal; o nome do aluno fica fixo. */
+.matriz__tabela th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--superficie);
+}
+
+.matriz__tabela thead th:first-child,
+.matriz__tabela tfoot th:first-child {
+  background: var(--superficie-2);
+}
+
+.matriz__linha--selecionada th:first-child {
+  background: #eaf1fb;
+}
+
 .matriz__tabela tbody tr {
   cursor: pointer;
 }
@@ -376,7 +393,7 @@
 }
 
 .matriz__tabela td {
-  min-width: 120px;
+  min-width: 112px;
 }
 
 .matriz__valor {

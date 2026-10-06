@@ -61,6 +61,63 @@ function Sequencia({ itens }) {
   );
 }
 
+/** Posição dos pontos de cada face, numa grade 3×3 (coluna, linha), como num dado de verdade. */
+const PONTOS_DO_DADO = {
+  1: [[1, 1]],
+  2: [[0, 0], [2, 2]],
+  3: [[0, 0], [1, 1], [2, 2]],
+  4: [[0, 0], [2, 0], [0, 2], [2, 2]],
+  5: [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]],
+  6: [[0, 0], [0, 1], [0, 2], [2, 0], [2, 1], [2, 2]],
+};
+
+function Dados({ faces }) {
+  return (
+    <div
+      className="dados"
+      role="group"
+      aria-label={faces.length > 1 ? `${faces.length} dados` : 'Dado'}
+    >
+      {faces.map((face, i) => (
+        <svg
+          key={i}
+          className="dado"
+          viewBox="0 0 60 60"
+          role="img"
+          aria-label={`Dado com ${face} ${face === 1 ? 'ponto' : 'pontos'}`}
+          style={{ '--atraso': `${i * 120}ms` }}
+        >
+          <rect x="3" y="3" width="54" height="54" rx="11" className="dado__face" />
+          {PONTOS_DO_DADO[face].map(([c, l]) => (
+            <circle
+              key={`${c}${l}`}
+              cx={14 + c * 16}
+              cy={14 + l * 16}
+              r="5.4"
+              className="dado__ponto"
+            />
+          ))}
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+/** "3 + ? = 7": a parcela que falta no lugar do segundo número. */
+function Parcela({ a, total }) {
+  return (
+    <p className="conta" aria-label={`${a} mais quanto é igual a ${total}?`}>
+      <span>{a}</span>
+      <span className="conta__sinal">+</span>
+      <span className="conta__resposta" aria-hidden="true">
+        ?
+      </span>
+      <span className="conta__sinal">=</span>
+      <span>{total}</span>
+    </p>
+  );
+}
+
 function Conta({ a, op, b }) {
   return (
     <p className="conta" aria-label={`${a} ${op === '+' ? 'mais' : 'menos'} ${b} é igual a quanto?`}>
@@ -85,6 +142,8 @@ export function Enunciado({ representacao, idQuestao }) {
       )}
       {r.tipo === 'sequencia' && <Sequencia itens={r.itens} />}
       {r.tipo === 'conta' && <Conta a={r.a} op={r.op} b={r.b} />}
+      {r.tipo === 'parcela' && <Parcela a={r.a} total={r.total} />}
+      {r.tipo === 'dados' && <Dados faces={r.faces} />}
     </div>
   );
 }
@@ -105,14 +164,31 @@ export function QuadroDeDez({ casas, rotulo }) {
 
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
-function Quadros({ a, op, b }) {
-  const quadros = fichasNosQuadros({ a, op, b });
-  const legenda =
-    op === '+'
-      ? `${plural(a, 'ficha azul', 'fichas azuis')} e mais ${plural(b, 'amarela', 'amarelas')}. ` +
-        (a + b > 10 ? 'Encha o primeiro quadro antes de passar para o próximo.' : 'Quantas são ao todo?')
-      : `${plural(a, 'ficha', 'fichas')}, e ${b === 1 ? '1 foi tirada' : `${b} foram tiradas`}. ` +
-        'Conte as que ficaram.';
+function legendaDosQuadros({ a, op, b, vagas = 0, dezenas = false }) {
+  if (dezenas) {
+    return 'Cada quadro cheio é uma dezena. Conte os quadros cheios e as fichas soltas.';
+  }
+  if (vagas > 0) {
+    return (
+      `${plural(a, 'ficha azul', 'fichas azuis')}. ` +
+      'As casas tracejadas são as que faltam. Quantas são?'
+    );
+  }
+  if (op === '+') {
+    const fim =
+      a + b > 10
+        ? 'Encha o primeiro quadro antes de passar para o próximo.'
+        : 'Quantas são ao todo?';
+    const amarelas = plural(b, 'amarela', 'amarelas');
+    return `${plural(a, 'ficha azul', 'fichas azuis')} e mais ${amarelas}. ${fim}`;
+  }
+  const tiradas = b === 1 ? '1 foi tirada' : `${b} foram tiradas`;
+  return `${plural(a, 'ficha', 'fichas')}, e ${tiradas}. Conte as que ficaram.`;
+}
+
+function Quadros(apoio) {
+  const quadros = fichasNosQuadros(apoio);
+  const legenda = legendaDosQuadros(apoio);
   return (
     <figure className="apoio-quadros">
       <div className="apoio-quadros__quadros">

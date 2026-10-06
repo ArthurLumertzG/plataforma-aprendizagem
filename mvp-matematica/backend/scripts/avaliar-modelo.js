@@ -20,7 +20,9 @@ const relatorio = avaliarModelo(
 );
 
 if (process.argv.includes('--json')) {
-  console.log(JSON.stringify({ versao_parametros_atual: VERSAO_PARAMETROS, ...relatorio }, null, 2));
+  console.log(
+    JSON.stringify({ versao_parametros_atual: VERSAO_PARAMETROS, ...relatorio }, null, 2),
+  );
   process.exit(0);
 }
 
@@ -32,7 +34,9 @@ const pct = (v) => (v === null ? '—' : `${Math.round(v * 100)}%`);
 const nomeDa = Object.fromEntries(habilidades.map((h) => [h.id, h.nome]));
 
 function tabela(cabecalho, linhas) {
-  const larguras = cabecalho.map((c, i) => Math.max(c.length, ...linhas.map((l) => String(l[i]).length)));
+  const larguras = cabecalho.map((c, i) =>
+    Math.max(c.length, ...linhas.map((l) => String(l[i]).length)),
+  );
   const formatar = (l) => '  ' + l.map((c, i) => String(c).padEnd(larguras[i])).join('  ');
   return [formatar(cabecalho), ...linhas.map(formatar)].join('\n');
 }
@@ -63,7 +67,12 @@ const saida = [
     ['faixa prevista', 'respostas', 'previsto', 'real'],
     r.calibracao
       .filter((f) => f.respostas > 0)
-      .map((f) => [`${pct(f.de)} a ${pct(f.ate)}`, f.respostas, pct(f.previsto_medio), pct(f.taxa_real)]),
+      .map((f) => [
+        `${pct(f.de)} a ${pct(f.ate)}`,
+        f.respostas,
+        pct(f.previsto_medio),
+        pct(f.taxa_real),
+      ]),
   ),
   '',
   'Por habilidade',

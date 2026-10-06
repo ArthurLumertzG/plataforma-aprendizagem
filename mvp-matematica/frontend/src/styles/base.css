@@ -383,6 +383,12 @@ code {
   box-shadow: inset 0 0 0 0.18em #f7d18a;
 }
 
+/* Casa que falta preencher ("quanto falta para 10?"): só o contorno da ficha. */
+.ficha--vaga {
+  border: 0.14em dashed var(--ficha-ambar-escura);
+  background: #fff8e8;
+}
+
 .ficha--riscada {
   border: 0.14em dashed var(--tinta-3);
   background:

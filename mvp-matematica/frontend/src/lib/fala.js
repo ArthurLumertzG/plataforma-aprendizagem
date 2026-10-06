@@ -7,6 +7,7 @@ export const falaDisponivel = typeof window !== 'undefined' && 'speechSynthesis'
 export function textoParaFala(texto) {
   return texto
     .replace(/\p{Extended_Pictographic}/gu, '')
+    .replace(/(\d+)\s*\+\s*\?\s*=\s*(\d+)/g, '$1 mais quanto é igual a $2?')
     .replace(/\s*=\s*\?/g, ' é igual a quanto?')
     .replace(/(\d)\s*\+\s*(\d)/g, '$1 mais $2')
     .replace(/(\d)\s*[−-]\s*(\d)/g, '$1 menos $2')

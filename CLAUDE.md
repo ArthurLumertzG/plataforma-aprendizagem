@@ -16,8 +16,9 @@ Os dois documentos são a **fonte da verdade**. Se algo aqui divergir deles, sig
 Existe uma **demo local aprovada** para mostrar a personalização funcionando. Como rodar, a API e o comportamento estão em `mvp-matematica/README.md`. Ela já tem:
 
 - BKT em funções puras (`backend/src/bkt.js`), com P(L) **recalculado a partir de eventos append-only** (não há tabela de domínio).
-- Diagnóstico inicial: 2 itens por habilidade, que inicializam `P(L0)`.
-- Motor de recomendação (`backend/src/motor.js`): zona proximal, reforço da habilidade mais frágil, dificuldade pelo P(L) e scaffolding com dica após 2 erros seguidos.
+- Diagnóstico inicial: 1 item por habilidade, na ordem do grafo, pulando o que depende de uma habilidade errada (máximo de 11 itens). Inicializa `P(L0)`.
+- Motor de recomendação (`backend/src/motor.js`) com as 4 regras: scaffolding (2 erros seguidos), revisão espaçada (intervalos em respostas, intercalada com a trilha), zona proximal com progressão por escada de dificuldade e reforço da mais frágil. A ordem difere do documento (revisão antes da zona proximal); justificativa no `mvp-matematica/README.md`.
+- 11 habilidades do grafo de senso numérico abaixo (sem correspondência um a um) e 88 questões, com representações próprias na interface (dados, `a + ? = c`, casas que faltam, dezenas em quadros de dez).
 - Painel do professor com alertas de travamento e o porquê de cada recomendação.
 - Métricas da pesquisa aplicada (`backend/src/metricas.js`): transparência da amostra, domínio confirmado (P(L) ≥ limiar + 2 acertos seguidos, só no painel), ganho estimado e taxa de acerto recente ao lado do acerto previsto, com alerta de divergência, tempo até o domínio (mediana da turma, sempre com quantos chegaram) e retenção ao voltar a uma habilidade dominada. Detalhes em `mvp-matematica/README.md`, seção "Métricas do painel".
 - Eventos com auditoria: `versao_parametros` do BKT, dificuldade servida e regra do motor que escolheu a questão.
@@ -30,10 +31,10 @@ Ela é **deliberadamente mais simples** que a arquitetura-alvo descrita no resto
 | Arquitetura-alvo (este arquivo) | Demo atual |
 |---|---|
 | Next.js full-stack + PostgreSQL | Express + SQLite (`backend/`) e React/Vite (`frontend/`), em JavaScript |
-| Grafo de senso numérico (rascunho abaixo) | 4 habilidades: contagem → adição/subtração até 10 → adição com reagrupamento |
+| Grafo de senso numérico (rascunho abaixo) | 11 habilidades do rascunho, sem correspondência um a um. Ainda sem validação dos conteudistas |
 | 7 entidades, com Sessão e Consentimento | Aluno, Habilidade, Questão e Evento. Sem sessão nem consentimento |
 | Autenticação + consentimento parental | Senha única no painel. Só alunos fictícios |
-| Repetição espaçada + progressão por sucesso consistente | Ainda não implementadas. A regra 2 é "reforço da mais frágil" |
+| Repetição espaçada em tempo | Intervalos em respostas de prática (8 → 16 → 32), porque a demo acontece em minutos |
 | Tempo de resposta e dicas modulam S/G | Não são coletados (decisão em aberto) |
 | PWA offline-first | Só online |
 
@@ -177,7 +178,7 @@ Soma até 10 + Subtração até 10 ─→ Valor posicional (dezena/unidade) ─�
 5. **Cliente:** app da criança simplificado + painel básico. Fluxo ponta a ponta demonstrável.
 6. **Piloto:** grupo pequeno real, com pré/pós-teste, comparado com a recomendação manual de um professor.
 
-Na demo (`mvp-matematica/`), as fases 2 e 3 estão cobertas, exceto a repetição espaçada e a progressão por sucesso consistente. Antes de apresentar resultados do piloto, rode `npm run avaliar-modelo` no banco do piloto e siga `docs/relatorio-piloto.md`: ganho de **todos** os alunos que começaram, nunca só de quem completou. O engajamento (conclusão de sessão) ainda não é medido, porque depende da entidade Sessão. As fases 1, 4 e 5 existem em versão simplificada (ver tabela em "Estado atual").
+Na demo (`mvp-matematica/`), as fases 2 e 3 estão cobertas (a revisão espaçada conta respostas, não dias). Antes de apresentar resultados do piloto, rode `npm run avaliar-modelo` no banco do piloto e siga `docs/relatorio-piloto.md`: ganho de **todos** os alunos que começaram, nunca só de quem completou. O engajamento (conclusão de sessão) ainda não é medido, porque depende da entidade Sessão. As fases 1, 4 e 5 existem em versão simplificada (ver tabela em "Estado atual").
 
 ## Privacidade por design (checklist para todo código novo)
 
@@ -208,7 +209,9 @@ Na demo (`mvp-matematica/`), as fases 2 e 3 estão cobertas, exceto a repetiçã
 Valores **provisórios** usados na demo, sem validação pedagógica. São constantes em `bkt.js`/`motor.js`/`metricas.js`, fáceis de trocar:
 
 - Limiar de domínio único de **0,6** (pré-requisito e "dominado").
-- Diagnóstico com **2 itens por habilidade** (um de dificuldade 1 e um de dificuldade 2). `P(L0)` vem só da evidência do BKT, sem P(T), limitado a **[0,10; 0,85]**.
+- Diagnóstico com **1 item por habilidade** (dificuldade 2), pulando dependentes de uma habilidade errada. `P(L0)` vem só da evidência do BKT, sem P(T), limitado a **[0,10; 0,85]**.
+- Escada de dificuldade: começa pelo P(L0) (abaixo de 0,4 → nível 1; até o limiar → 2; acima → 3) e **sobe a cada 2 acertos seguidos**. Consolidada = limiar + topo da escada.
+- Revisão espaçada a cada **8 → 16 → 32 respostas** de outras habilidades, com **2 respostas de trilha entre revisões** enquanto há o que aprender.
 - BKT padrão: P(L0) = 0,3; P(T) = 0,15; P(S) = 0,1; P(G) = 0,2. Uma habilidade pode sobrescrever esses valores pelo campo `bkt` no seed.
 - Scaffolding após **2 erros seguidos** na mesma habilidade.
 - Domínio confirmado no painel com **2 acertos seguidos** de prática. O motor continua usando só o P(L).
