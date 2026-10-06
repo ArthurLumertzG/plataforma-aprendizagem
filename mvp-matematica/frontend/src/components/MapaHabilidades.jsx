@@ -90,6 +90,10 @@ export default function MapaHabilidades({ habilidades, recomendada }) {
                   <span className="estado estado--alvo">
                     <Icone nome="alvo" tamanho={14} /> praticando
                   </span>
+                ) : h.acima_do_limiar ? (
+                  <span className="estado estado--confirmar">
+                    <Icone nome="pendente" tamanho={14} /> a confirmar
+                  </span>
                 ) : null}
               </span>
               <span className="mapa__barra" aria-hidden="true">

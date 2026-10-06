@@ -18,9 +18,11 @@ db.pragma('foreign_keys = ON');
 /**
  * v1: P(L) gravado na tabela `dominio` e sobrescrito a cada resposta.
  * v2: só eventos append-only; P(L) é recalculado a partir deles (bkt.js).
- * Os dados são fictícios, então a migração v1 → v2 simplesmente recria tudo.
+ * v3: o evento grava a versão dos parâmetros do BKT, a dificuldade servida e a
+ *     regra do motor que escolheu a questão (auditoria do próprio modelo).
+ * Os dados são fictícios, então a migração simplesmente recria tudo.
  */
-const VERSAO_ESQUEMA = 2;
+const VERSAO_ESQUEMA = 3;
 
 if (db.pragma('user_version', { simple: true }) < VERSAO_ESQUEMA) {
   db.exec(`
@@ -68,6 +70,11 @@ db.exec(`
     resposta_dada TEXT    NOT NULL,
     correto       INTEGER NOT NULL,
     finalidade    TEXT    NOT NULL DEFAULT 'pedagogica' CHECK (finalidade = 'pedagogica'),
+    -- Auditoria: o motor decide o que o aluno vê, então os dados já nascem
+    -- enviesados por ele. Guardar como cada questão foi servida permite medir isso.
+    versao_parametros   TEXT    NOT NULL,  -- VERSAO_PARAMETROS do bkt.js em vigor
+    dificuldade_servida INTEGER NOT NULL,
+    regra               TEXT,              -- regra do motor; NULL se não era a recomendada
     criado_em     TEXT    NOT NULL
   );
 `);
@@ -154,7 +161,7 @@ export function eventosDoAluno(alunoId) {
   return db
     .prepare(
       `SELECT e.id, e.questao_id, e.habilidade_id, e.tipo, e.resposta_dada, e.correto,
-              e.criado_em, q.enunciado
+              e.versao_parametros, e.dificuldade_servida, e.regra, e.criado_em, q.enunciado
          FROM eventos e
          JOIN questoes q ON q.id = e.questao_id
         WHERE e.aluno_id = ?
@@ -168,9 +175,10 @@ export function registrarEvento(evento) {
   const { lastInsertRowid } = db
     .prepare(
       `INSERT INTO eventos
-         (aluno_id, questao_id, habilidade_id, tipo, resposta_dada, correto, criado_em)
+         (aluno_id, questao_id, habilidade_id, tipo, resposta_dada, correto,
+          versao_parametros, dificuldade_servida, regra, criado_em)
        VALUES (@aluno_id, @questao_id, @habilidade_id, @tipo, @resposta_dada, @correto,
-               datetime('now'))`,
+               @versao_parametros, @dificuldade_servida, @regra, datetime('now'))`,
     )
     .run({ ...evento, correto: evento.correto ? 1 : 0 });
   return Number(lastInsertRowid);

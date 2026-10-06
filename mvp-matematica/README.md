@@ -121,6 +121,60 @@ offline, sincronizar vira "juntar listas de eventos e recalcular".
 A API devolve a regra aplicada junto com a questão. A tela do aluno mostra isso no
 bloco "Por que esta questão?", útil para a demonstração.
 
+**5. Auditoria do próprio modelo.** Como o motor decide o que a criança vê, os dados
+já nascem enviesados por ele. Por isso cada evento grava também a versão dos
+parâmetros do BKT em vigor (`versao_parametros`, hoje `v1`), a dificuldade da questão
+servida e a regra do motor que a escolheu (`null` se a criança respondeu uma questão
+que não era a recomendada). Mudou `PARAMETROS`, `LIMITES_P_L0` ou um `bkt` do seed?
+Troque `VERSAO_PARAMETROS` em `bkt.js`: o teste `bkt.test.js` falha até a versão nova
+ser registrada, e assim P(L) de regras diferentes não se misturam sem ninguém
+perceber.
+
+## Métricas do painel
+
+Vêm da pesquisa aplicada sobre plataformas parecidas (Khan Academy, Duolingo, ALEKS e
+outras). São funções puras em `backend/src/metricas.js`: não atualizam P(L) nem
+escolhem questões. A regra geral é **nenhuma métrica sozinha** (Lei de Goodhart):
+acertar muito em questões fáceis demais não é aprender.
+
+- **Transparência da amostra.** O painel sempre mostra "X de Y alunos cadastrados têm
+  dados suficientes para análise". O mínimo são **10 respostas de prática**, e o teste
+  rápido não conta: com ele, quem fez o teste e mais 2 questões já entraria. É a
+  resposta ao viés de sobrevivência dos estudos da Khan Academy, que reportaram só
+  4,7% dos participantes.
+- **Domínio confirmado.** "Dominada ✓" só com P(L) ≥ 0,6 **e** 2 acertos seguidos na
+  prática da habilidade. Cruzar o limiar uma vez pode ser sorte (de 0,3, um único
+  acerto leva a 0,71), e P(L) pode continuar acima de 0,6 logo depois de um erro.
+  Acima do limiar sem os acertos seguidos aparece "a confirmar". Os acertos seguidos
+  são derivados dos eventos, como os erros seguidos: nada é gravado.
+  **O motor não mudou**: ele continua decidindo pelo P(L). Se usasse o domínio
+  confirmado, nenhuma habilidade estaria dominada logo depois do teste rápido, e a
+  criança que acertou tudo voltaria para a contagem.
+- **Ganho estimado.** P(L) atual − P(L0), com seta ↑/↓. É o modelo medindo a si
+  mesmo, por isso o nome "estimado": o ganho de verdade vem do pré/pós-teste do
+  piloto.
+- **Últimas 10 respostas** da habilidade, ao lado do **acerto previsto** pelo modelo
+  para essas mesmas respostas (média de P(L)(1−S) + (1−P(L))G com o P(L) de antes de
+  cada uma).
+- **Divergência ("longe do previsto").** Alerta quando a taxa recente se afasta mais
+  de **0,3** do acerto previsto, com pelo menos **5** respostas. Pode ser chute,
+  distração ou um P(L) mal calibrado (por exemplo, um teste rápido que superestimou a
+  criança). Não comparamos a taxa com o P(L) atual, como seria o mais óbvio: são
+  unidades diferentes (quem não sabe ainda acerta 20% no chute), e o P(L) atual
+  depende muito da última resposta. Numa simulação, essa comparação disparava para
+  12% a 28% das crianças com desempenho estável. A comparação com o previsto fica
+  perto de 0% nesses casos e só dispara quando o modelo errou de forma consistente.
+  Se a habilidade já travou, o painel mostra só o travamento, para não repetir o
+  alerta.
+
+Os limiares (2 acertos, 10 respostas, 0,3 e 5) são **provisórios**, sem validação
+pedagógica. São constantes no topo de `metricas.js`.
+
+Não há XP, sequência de dias nem ranking, e isso é intencional: no Duolingo, XP fixo
+por resposta faz repetir o fácil, e a sequência de dias gera ansiedade. Se um dia
+houver pontos, eles devem ser proporcionais ao ganho de P(L) da resposta, nunca um
+valor fixo.
+
 ## Interface
 
 O conceito visual é o **caderno quadriculado** de matemática, e as quantidades aparecem
@@ -155,11 +209,13 @@ provisório e fica numa constante só (`MARCA`, em `frontend/src/lib/textos.js`)
 - **"Bastidores"** (recolhido) mostra a regra, o P(L) e o motivo de cada questão, para
   a apresentação.
 
-**Painel do professor**: alertas de travamento no topo, matriz aluno × habilidade
-(P(L), limiar e ponto de partida do teste rápido) e, para o aluno selecionado, a
-próxima recomendação com a regra e o motivo, o mapa de pré-requisitos com o P(L) em
-cada nó e as últimas respostas. A recomendação vem de `GET /proxima-questao`, que não
-grava nada.
+**Painel do professor**: quantos alunos têm dados para análise, alertas de travamento e
+de divergência no topo, matriz aluno × habilidade (P(L), limiar, ponto de partida do
+teste rápido, estado e ganho) e, para o aluno selecionado, a próxima recomendação com a
+regra e o motivo, a tabela "habilidade por habilidade" (domínio, ganho e últimas 10 lado
+a lado), o mapa de pré-requisitos com o P(L) em cada nó e as últimas respostas. A
+recomendação vem de `GET /proxima-questao`, que não grava nada. A matriz fica na ordem
+de cadastro, nunca ordenada por desempenho.
 
 **Fontes auto-hospedadas** (`@fontsource`, sem Google Fonts): nenhum acesso de criança
 passa por terceiros, e o app fica mais perto do offline-first. Andika (SIL, feita para
@@ -186,9 +242,9 @@ contagem_ate_10 ─┬─→ adicao_ate_10 ────┬─→ adicao_com_reag
 | GET | `/api/habilidades` | Grafo de habilidades + pré-requisitos |
 | GET | `/api/alunos/:id/proxima-questao` | Item do teste rápido ou questão recomendada, com a regra que a escolheu |
 | POST | `/api/alunos/:id/respostas` | Body `{ questao_id, resposta_dada }`; registra o evento e devolve o P(L) antes/depois. Durante o teste rápido, responde 409 se a questão não for a atual |
-| GET | `/api/alunos/:id/dominio` | P(L), P(L0) e alerta de travamento por habilidade + progresso do teste rápido |
-| GET | `/api/alunos/:id/historico` | Últimas respostas (`?limite=10`) |
-| GET | `/api/professor/painel` | Tudo que o painel precisa; exige header `x-senha-professor` |
+| GET | `/api/alunos/:id/dominio` | Por habilidade: P(L), P(L0), ganho, domínio confirmado, últimas respostas com o acerto previsto e alertas. Mais o progresso do teste rápido |
+| GET | `/api/alunos/:id/historico` | Últimas respostas (`?limite=10`), com a regra e a dificuldade de cada uma |
+| GET | `/api/professor/painel` | Tudo que o painel precisa, incluindo `amostra` (`total`, `com_dados`, `minimo`) e `versao_parametros`; exige header `x-senha-professor` |
 
 ## Estrutura
 
@@ -200,7 +256,8 @@ mvp-matematica/
 │   │   ├── db.js          # SQLite: esquema, migração, seed e eventos
 │   │   ├── bkt.js         # modelo do aluno: BKT, P(L0) e recálculo a partir dos eventos
 │   │   ├── motor.js       # motor de recomendação: diagnóstico + 4 regras
-│   │   ├── *.test.js      # testes do BKT, de cada regra e com alunos sintéticos
+│   │   ├── metricas.js    # métricas do painel: domínio confirmado, ganho, divergência, amostra
+│   │   ├── *.test.js      # testes do BKT, de cada regra, das métricas e com alunos sintéticos
 │   │   ├── routes.js
 │   │   └── server.js
 │   └── package.json
@@ -216,12 +273,16 @@ mvp-matematica/
 ```
 
 Para recomeçar do zero, apague `backend/data/mvp.db` e suba a API de novo. Um banco
-da versão anterior (com a tabela `dominio`) é recriado automaticamente na primeira
-execução. Como os dados são fictícios, nada é migrado.
+de versão anterior (com a tabela `dominio`, ou com eventos sem as colunas de
+auditoria) é recriado automaticamente na primeira execução. Como os dados são
+fictícios, nada é migrado: as respostas já dadas se perdem.
 
 ## Fora de escopo nesta versão
 
 Autenticação real, consentimento parental/LGPD, calibração dos parâmetros do BKT com
 dados reais, uso do tempo de resposta e das dicas como força da evidência (decisão
 ainda em aberto), repetição espaçada, progressão de dificuldade por sucesso
-consistente, modo offline e deploy em nuvem. São iterações futuras, não omissões.
+consistente, modo offline e deploy em nuvem. Das métricas da pesquisa aplicada, ainda
+faltam tempo até o domínio, retenção (depende da repetição espaçada), acurácia do
+modelo (AUC e calibração, obrigatória antes de apresentar resultados do piloto) e
+engajamento (depende da entidade Sessão). São iterações futuras, não omissões.

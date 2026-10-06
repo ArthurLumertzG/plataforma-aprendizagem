@@ -36,6 +36,35 @@ function Avatar({ aluno }) {
   );
 }
 
+/**
+ * Ganho estimado desde o teste rápido, em pontos de P(L). Seta e texto juntos,
+ * nunca só cor. Cai sem vermelho: descer não é castigo, é informação.
+ */
+function Ganho({ ganho }) {
+  if (ganho === null) return <span className="ganho ganho--vazio">sem ponto de partida</span>;
+  const pontos = Math.round(ganho * 100);
+  const direcao = pontos > 0 ? 'sobe' : pontos < 0 ? 'desce' : 'igual';
+  const seta = { sobe: '↑', desce: '↓', igual: '=' }[direcao];
+  return (
+    <span className={`ganho ganho--${direcao}`}>
+      <span aria-hidden="true">{seta}</span>
+      <span className="visualmente-oculto">
+        {direcao === 'sobe' ? 'subiu' : direcao === 'desce' ? 'desceu' : 'não mudou'}
+      </span>{' '}
+      {Math.abs(pontos)} pts
+    </span>
+  );
+}
+
+/** Um estado por célula, do mais urgente ao menos: travou, investigar, dominada, a confirmar. */
+function estadoDa(h) {
+  if (h.travou) return { classe: 'travou', icone: 'alerta', texto: 'travou' };
+  if (h.recente.divergente) return { classe: 'investigar', icone: 'lupa', texto: 'acertos longe do previsto' };
+  if (h.dominada) return { classe: 'dominada', icone: 'certo', texto: 'dominada' };
+  if (h.acima_do_limiar) return { classe: 'confirmar', icone: 'pendente', texto: 'a confirmar' };
+  return null;
+}
+
 // ---------- login ----------
 
 function Entrada({ aoEntrar, erro }) {
@@ -93,31 +122,65 @@ function Entrada({ aoEntrar, erro }) {
 
 // ---------- blocos do painel ----------
 
-function Atencao({ alunos, aoVer }) {
-  const alertas = alunos.flatMap((a) =>
-    a.dominio.filter((h) => h.travou).map((h) => ({ aluno: a, habilidade: h })),
+/** Travamento primeiro; a divergência só vira alerta onde não há travamento (seria repetido). */
+function alertasDa(aluno) {
+  return aluno.dominio.flatMap((h) => {
+    if (h.travou) return [{ tipo: 'travou', aluno, habilidade: h }];
+    if (h.recente.divergente) return [{ tipo: 'divergente', aluno, habilidade: h }];
+    return [];
+  });
+}
+
+function TextoDoAlerta({ tipo, aluno, habilidade }) {
+  if (tipo === 'travou') {
+    return (
+      <span>
+        <strong>{aluno.nome}</strong> travou em <strong>{habilidade.nome}</strong>:{' '}
+        {habilidade.erros_seguidos} erros seguidos. O sistema passou a dar questões fáceis com
+        dica e material de apoio.
+      </span>
+    );
+  }
+  const { acertos, respostas, acerto_esperado } = habilidade.recente;
+  return (
+    <span>
+      <strong>{aluno.nome}</strong> acertou {acertos} de {respostas} em{' '}
+      <strong>{habilidade.nome}</strong>, mas o modelo previa cerca de {pct(acerto_esperado)}.
+      Vale observar: pode ser chute, distração ou um domínio mal estimado.
+    </span>
   );
+}
+
+function Atencao({ alunos, aoVer }) {
+  const alertas = alunos.flatMap(alertasDa);
 
   return (
     <section className="atencao" aria-labelledby="titulo-atencao">
       <h2 id="titulo-atencao">Precisa de atenção</h2>
       {alertas.length === 0 ? (
         <p className="atencao__vazio">
-          <Icone nome="certo" tamanho={18} /> Ninguém travado agora. Os alertas aparecem aqui
-          quando um aluno erra duas vezes seguidas a mesma habilidade.
+          <Icone nome="certo" tamanho={18} /> Ninguém precisa de atenção agora. Os alertas
+          aparecem aqui quando um aluno erra duas vezes seguidas a mesma habilidade ou quando os
+          acertos dele se afastam muito do que o modelo previa.
         </p>
       ) : (
         <ul className="atencao__lista">
-          {alertas.map(({ aluno, habilidade }) => (
-            <li key={`${aluno.id}-${habilidade.habilidade_id}`} className="atencao__item">
-              <Icone nome="alerta" className="atencao__icone" />
-              <span>
-                <strong>{aluno.nome}</strong> travou em <strong>{habilidade.nome}</strong>:{' '}
-                {habilidade.erros_seguidos} erros seguidos. O sistema passou a dar questões
-                fáceis com dica e material de apoio.
-              </span>
-              <button type="button" className="botao botao--leve" onClick={() => aoVer(aluno.id)}>
-                Ver {aluno.nome}
+          {alertas.map((alerta) => (
+            <li
+              key={`${alerta.aluno.id}-${alerta.habilidade.habilidade_id}`}
+              className={`atencao__item atencao__item--${alerta.tipo}`}
+            >
+              <Icone
+                nome={alerta.tipo === 'travou' ? 'alerta' : 'lupa'}
+                className="atencao__icone"
+              />
+              <TextoDoAlerta {...alerta} />
+              <button
+                type="button"
+                className="botao botao--leve"
+                onClick={() => aoVer(alerta.aluno.id)}
+              >
+                Ver {alerta.aluno.nome}
               </button>
             </li>
           ))}
@@ -127,7 +190,7 @@ function Atencao({ alunos, aoVer }) {
   );
 }
 
-function Matriz({ alunos, limiar, selecionado, aoSelecionar }) {
+function Matriz({ alunos, limiar, acertosParaDominio, selecionado, aoSelecionar }) {
   const habilidades = alunos[0]?.dominio ?? [];
 
   return (
@@ -147,6 +210,20 @@ function Matriz({ alunos, limiar, selecionado, aoSelecionar }) {
             <span className="legenda-partida" aria-hidden="true" />
             Ponto de partida do teste rápido
           </span>
+        </p>
+        <p className="matriz__legenda">
+          <span className="legenda-item estado estado--dominada">
+            <Icone nome="certo" tamanho={14} /> Dominada: no limiar e {acertosParaDominio} acertos
+            seguidos
+          </span>
+          <span className="legenda-item estado estado--confirmar">
+            <Icone nome="pendente" tamanho={14} /> A confirmar: passou do limiar, faltam acertos
+            seguidos
+          </span>
+          <span className="legenda-item estado estado--investigar">
+            <Icone nome="lupa" tamanho={14} /> Acertos longe do previsto
+          </span>
+          <span className="legenda-item">↑↓ Ganho desde o teste rápido</span>
         </p>
       </div>
 
@@ -190,26 +267,29 @@ function Matriz({ alunos, limiar, selecionado, aoSelecionar }) {
                     </span>
                   </button>
                 </th>
-                {a.dominio.map((h) => (
-                  <td key={h.habilidade_id} className={h.travou ? 'matriz__celula--travou' : ''}>
-                    <span className="matriz__valor">
-                      {pct(h.p_l)}
-                      {h.travou && (
-                        <span className="estado estado--travou">
-                          <Icone nome="alerta" tamanho={14} />
-                          <span className="visualmente-oculto">travou</span>
+                {a.dominio.map((h) => {
+                  const estado = estadoDa(h);
+                  return (
+                    <td key={h.habilidade_id} className={h.travou ? 'matriz__celula--travou' : ''}>
+                      <span className="matriz__valor">
+                        {pct(h.p_l)}
+                        {estado && (
+                          <span className={`estado estado--${estado.classe}`}>
+                            <Icone nome={estado.icone} tamanho={14} />
+                            <span className="visualmente-oculto">{estado.texto}</span>
+                          </span>
+                        )}
+                      </span>
+                      <Regua pL={h.p_l} pL0={h.p_l0} limiar={limiar} dominada={h.dominada} />
+                      {/* Sem prática o ganho é sempre 0: só poluiria a matriz. */}
+                      {h.ganho !== null && h.recente.respostas > 0 && (
+                        <span className="matriz__ganho">
+                          <Ganho ganho={h.ganho} />
                         </span>
                       )}
-                      {!h.travou && h.dominada && (
-                        <span className="estado estado--dominada">
-                          <Icone nome="certo" tamanho={14} />
-                          <span className="visualmente-oculto">dominada</span>
-                        </span>
-                      )}
-                    </span>
-                    <Regua pL={h.p_l} pL0={h.p_l0} limiar={limiar} dominada={h.dominada} />
-                  </td>
-                ))}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
@@ -219,7 +299,70 @@ function Matriz({ alunos, limiar, selecionado, aoSelecionar }) {
   );
 }
 
-function DetalheAluno({ aluno, recomendacao }) {
+/**
+ * Domínio, ganho e acertos recentes lado a lado. Nenhum deles sozinho diz se a
+ * criança está aprendendo: acerto alto com questões fáceis demais não é domínio.
+ */
+function LadoALado({ aluno, janela, acertosParaDominio }) {
+  return (
+    <table className="lado-a-lado">
+      <thead>
+        <tr>
+          <th scope="col">Habilidade</th>
+          <th scope="col">Domínio</th>
+          <th scope="col">Ganho estimado</th>
+          <th scope="col">Últimas {janela}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {aluno.dominio.map((h) => {
+          const { respostas, acertos, acerto_esperado, divergente } = h.recente;
+          return (
+            <tr key={h.habilidade_id}>
+              <th scope="row">
+                {h.nome}
+                {h.dominada && (
+                  <span className="estado estado--dominada">
+                    <Icone nome="certo" tamanho={14} /> dominada
+                  </span>
+                )}
+                {!h.dominada && h.acima_do_limiar && (
+                  <span className="estado estado--confirmar">
+                    <Icone nome="pendente" tamanho={14} /> a confirmar ({h.acertos_seguidos} de{' '}
+                    {acertosParaDominio} acertos seguidos)
+                  </span>
+                )}
+              </th>
+              <td className="lado-a-lado__numero">{pct(h.p_l)}</td>
+              <td>
+                <Ganho ganho={h.ganho} />
+              </td>
+              <td>
+                {respostas === 0 ? (
+                  <span className="lado-a-lado__vazio">sem prática</span>
+                ) : (
+                  <>
+                    <span className="lado-a-lado__numero">
+                      {acertos} de {respostas}
+                    </span>
+                    <span className="lado-a-lado__previsto">previsto {pct(acerto_esperado)}</span>
+                    {divergente && (
+                      <span className="estado estado--investigar">
+                        <Icone nome="lupa" tamanho={14} /> longe do previsto
+                      </span>
+                    )}
+                  </>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function DetalheAluno({ aluno, recomendacao, janela, acertosParaDominio }) {
   const explicacao = recomendacao?.explicacao;
   const habilidadeAlvo = aluno.dominio.find((h) => h.habilidade_id === explicacao?.habilidade_id);
 
@@ -251,9 +394,20 @@ function DetalheAluno({ aluno, recomendacao }) {
       </section>
 
       <section className="detalhe__bloco">
+        <h3>Habilidade por habilidade</h3>
+        <p className="detalhe__nota">
+          O ganho é o que o próprio modelo estima desde o teste rápido. O acerto previsto é o que
+          o modelo esperava para essas mesmas respostas.
+        </p>
+        <div className="detalhe__rolagem">
+          <LadoALado aluno={aluno} janela={janela} acertosParaDominio={acertosParaDominio} />
+        </div>
+      </section>
+
+      <section className="detalhe__bloco">
         <h3>Mapa de habilidades</h3>
         <p className="detalhe__nota">
-          Cada habilidade só é praticada quando as de cima já estão dominadas.
+          Cada habilidade só é praticada quando as de cima já passaram do limiar.
         </p>
         <div className="detalhe__mapa">
           <MapaHabilidades habilidades={aluno.dominio} recomendada={explicacao?.habilidade_id} />
@@ -374,9 +528,8 @@ export default function ProfessorPage() {
   if (!autenticado) return <Entrada aoEntrar={entrar} erro={erro} />;
 
   const aluno = painel.alunos.find((a) => a.id === selecionado);
-  const travados = new Set(
-    painel.alunos.filter((a) => a.dominio.some((h) => h.travou)).map((a) => a.id),
-  ).size;
+  const precisamAtencao = painel.alunos.filter((a) => alertasDa(a).length > 0).length;
+  const { amostra } = painel;
   const emTeste = painel.alunos.filter((a) => !a.diagnostico.concluido).length;
 
   return (
@@ -402,16 +555,25 @@ export default function ProfessorPage() {
             <h1>Turma de demonstração</h1>
             <p>
               {painel.alunos.length} alunos.{' '}
-              {travados === 0 && 'Nenhum precisa de atenção agora'}
-              {travados === 1 && '1 precisa de atenção agora'}
-              {travados > 1 && `${travados} precisam de atenção agora`}
+              {precisamAtencao === 0 && 'Nenhum precisa de atenção agora'}
+              {precisamAtencao === 1 && '1 precisa de atenção agora'}
+              {precisamAtencao > 1 && `${precisamAtencao} precisam de atenção agora`}
               {emTeste > 0 && `, e ${emTeste} ainda ${emTeste === 1 ? 'faz' : 'fazem'} o teste rápido`}.
+            </p>
+            {/* Sempre visível: nenhuma análise esconde quem ficou de fora. */}
+            <p className="painel__amostra">
+              <strong>
+                {amostra.com_dados} de {amostra.total}
+              </strong>{' '}
+              alunos cadastrados têm dados suficientes para análise (mínimo: {amostra.minimo}{' '}
+              respostas de prática, sem contar o teste rápido).
             </p>
           </div>
           <Atencao alunos={painel.alunos} aoVer={setSelecionado} />
           <Matriz
             alunos={painel.alunos}
             limiar={painel.limiar_dominio}
+            acertosParaDominio={painel.acertos_para_dominio}
             selecionado={selecionado}
             aoSelecionar={setSelecionado}
           />
@@ -421,6 +583,8 @@ export default function ProfessorPage() {
           <DetalheAluno
             aluno={aluno}
             recomendacao={recomendacao?.alunoId === aluno.id ? recomendacao : null}
+            janela={painel.janela_recente}
+            acertosParaDominio={painel.acertos_para_dominio}
           />
         )}
       </main>

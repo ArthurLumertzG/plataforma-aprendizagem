@@ -402,7 +402,7 @@ code {
   }
 }
 
-/* ---------- estados (dominada, travou, praticando): sempre ícone + texto ---------- */
+/* ---------- estados (dominada, a confirmar, travou, investigar, praticando): sempre ícone + texto ---------- */
 .estado {
   display: inline-flex;
   align-items: center;
@@ -421,6 +421,14 @@ code {
 
 .estado--alvo {
   color: var(--acao);
+}
+
+.estado--confirmar {
+  color: var(--tinta-2);
+}
+
+.estado--investigar {
+  color: var(--quase);
 }
 
 /* ---------- régua de domínio ---------- */

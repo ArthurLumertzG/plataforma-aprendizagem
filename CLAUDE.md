@@ -19,6 +19,8 @@ Existe uma **demo local aprovada** para mostrar a personalização funcionando. 
 - Diagnóstico inicial: 2 itens por habilidade, que inicializam `P(L0)`.
 - Motor de recomendação (`backend/src/motor.js`): zona proximal, reforço da habilidade mais frágil, dificuldade pelo P(L) e scaffolding com dica após 2 erros seguidos.
 - Painel do professor com alertas de travamento e o porquê de cada recomendação.
+- Métricas da pesquisa aplicada (`backend/src/metricas.js`): transparência da amostra, domínio confirmado (P(L) ≥ limiar + 2 acertos seguidos, só no painel), ganho estimado e taxa de acerto recente ao lado do acerto previsto, com alerta de divergência. Detalhes em `mvp-matematica/README.md`, seção "Métricas do painel".
+- Eventos com auditoria: `versao_parametros` do BKT, dificuldade servida e regra do motor que escolheu a questão.
 - Interface "Quadriculado" (nome provisório): página institucional, área da criança com material concreto no scaffolding, leitura em voz alta e ajustes de leitura, e painel com matriz aluno × habilidade e mapa de pré-requisitos. Decisões em `mvp-matematica/README.md`, seção "Interface".
 - Testes por regra e com alunos sintéticos (`npm test` em `backend/`).
 
@@ -173,7 +175,7 @@ Soma até 10 + Subtração até 10 ─→ Valor posicional (dezena/unidade) ─�
 5. **Cliente:** app da criança simplificado + painel básico. Fluxo ponta a ponta demonstrável.
 6. **Piloto:** grupo pequeno real, com pré/pós-teste, comparado com a recomendação manual de um professor.
 
-Na demo (`mvp-matematica/`), as fases 2 e 3 estão cobertas, exceto a repetição espaçada e a progressão por sucesso consistente. As fases 1, 4 e 5 existem em versão simplificada (ver tabela em "Estado atual").
+Na demo (`mvp-matematica/`), as fases 2 e 3 estão cobertas, exceto a repetição espaçada e a progressão por sucesso consistente. Antes do piloto, falta medir a acurácia do modelo (AUC/calibração de P(L) contra o acerto seguinte) e reportar o ganho de **todos** os alunos que começaram, nunca só de quem completou. As fases 1, 4 e 5 existem em versão simplificada (ver tabela em "Estado atual").
 
 ## Privacidade por design (checklist para todo código novo)
 
@@ -201,9 +203,13 @@ Na demo (`mvp-matematica/`), as fases 2 e 3 estão cobertas, exceto a repetiçã
 - Estratégia de sincronização offline entre múltiplos dispositivos da mesma criança.
 - Migração da demo para a stack-alvo (Next.js + Postgres) ou atualização da stack-alvo para refletir a demo.
 
-Valores **provisórios** usados na demo, sem validação pedagógica. São constantes em `bkt.js`/`motor.js`, fáceis de trocar:
+Valores **provisórios** usados na demo, sem validação pedagógica. São constantes em `bkt.js`/`motor.js`/`metricas.js`, fáceis de trocar:
 
 - Limiar de domínio único de **0,6** (pré-requisito e "dominado").
 - Diagnóstico com **2 itens por habilidade** (um de dificuldade 1 e um de dificuldade 2). `P(L0)` vem só da evidência do BKT, sem P(T), limitado a **[0,10; 0,85]**.
 - BKT padrão: P(L0) = 0,3; P(T) = 0,15; P(S) = 0,1; P(G) = 0,2. Uma habilidade pode sobrescrever esses valores pelo campo `bkt` no seed.
 - Scaffolding após **2 erros seguidos** na mesma habilidade.
+- Domínio confirmado no painel com **2 acertos seguidos** de prática. O motor continua usando só o P(L).
+- Aluno com dados suficientes para análise: **10 respostas de prática** (o teste rápido não conta).
+- Alerta de divergência quando a taxa nas **últimas 10** se afasta mais de **0,3** do acerto previsto, com no mínimo **5** respostas. Constantes em `metricas.js`.
+- Parâmetros do BKT na versão **`v1`** (`VERSAO_PARAMETROS` em `bkt.js`).

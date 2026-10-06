@@ -1,6 +1,23 @@
 import { Router } from 'express';
 
-import { PARAMETROS, LIMIAR_DOMINIO, LIMITES_P_L0, recalcularDominio } from './bkt.js';
+import {
+  PARAMETROS,
+  LIMIAR_DOMINIO,
+  LIMITES_P_L0,
+  VERSAO_PARAMETROS,
+  parametrosDa,
+  recalcularDominio,
+} from './bkt.js';
+import {
+  ACERTOS_PARA_DOMINIO,
+  DIVERGENCIA,
+  JANELA_RECENTE,
+  acertosSeguidos,
+  desempenhoRecente,
+  dominioRobusto,
+  ganhoAprendizagem,
+  transparenciaAmostra,
+} from './metricas.js';
 import {
   ERROS_PARA_SCAFFOLDING,
   contarErrosSeguidos,
@@ -44,16 +61,27 @@ function estadoDoAluno(alunoId) {
   return { habilidades, questoes, eventos, dominio, pL0, trajetoria, diagnostico };
 }
 
-function resumoDominio({ habilidades, dominio, pL0, eventos, diagnostico }) {
+/**
+ * Por habilidade: P(L) e as métricas que precisam aparecer junto dele.
+ * `acima_do_limiar` é o que o motor usa; `dominada` é o domínio confirmado
+ * (limiar + acertos seguidos), o único que o painel mostra como "dominada".
+ */
+function resumoDominio({ habilidades, dominio, pL0, eventos, trajetoria, diagnostico }) {
   return habilidades.map((h) => {
     const errosSeguidos = contarErrosSeguidos(eventos, h.id);
+    const acertos = acertosSeguidos(eventos, h.id);
+    const p_l0 = diagnostico.concluido ? pL0[h.id] : null;
     return {
       habilidade_id: h.id,
       nome: h.nome,
       pre_requisitos: h.pre_requisitos,
       p_l: dominio[h.id],
-      p_l0: diagnostico.concluido ? pL0[h.id] : null,
-      dominada: dominio[h.id] >= LIMIAR_DOMINIO,
+      p_l0,
+      ganho: ganhoAprendizagem(dominio[h.id], p_l0),
+      acima_do_limiar: dominio[h.id] >= LIMIAR_DOMINIO,
+      acertos_seguidos: acertos,
+      dominada: dominioRobusto(dominio[h.id], acertos),
+      recente: desempenhoRecente(eventos, trajetoria, h.id, parametrosDa(h)),
       erros_seguidos: errosSeguidos,
       travou: errosSeguidos >= ERROS_PARA_SCAFFOLDING,
     };
@@ -73,6 +101,8 @@ function historicoRecente({ eventos, trajetoria }, limite) {
       enunciado: e.enunciado,
       resposta_dada: e.resposta_dada,
       correto: e.correto,
+      regra: e.regra,
+      dificuldade_servida: e.dificuldade_servida,
       criado_em: e.criado_em,
       p_l_antes: trajetoria[e.id]?.p_l_antes ?? null,
       p_l_depois: trajetoria[e.id]?.p_l_depois ?? null,
@@ -110,6 +140,7 @@ router.get('/alunos/:id/dominio', exigeAluno, (req, res) => {
   res.json({
     aluno: req.aluno,
     limiar_dominio: LIMIAR_DOMINIO,
+    acertos_para_dominio: ACERTOS_PARA_DOMINIO,
     diagnostico,
     habilidades: resumoDominio(estado),
   });
@@ -163,7 +194,8 @@ router.post('/alunos/:id/respostas', exigeAluno, (req, res) => {
   const questao = buscarQuestao(questao_id);
   if (!questao) return res.status(404).json({ erro: 'Questão não encontrada' });
 
-  const { diagnostico } = estadoDoAluno(req.aluno.id);
+  const antes = estadoDoAluno(req.aluno.id);
+  const { diagnostico } = antes;
   const tipo = diagnostico.concluido ? 'pratica' : 'diagnostico';
 
   // O diagnóstico tem ordem fixa: aceitar outra questão bagunçaria o P(L0).
@@ -171,6 +203,14 @@ router.post('/alunos/:id/respostas', exigeAluno, (req, res) => {
     return res
       .status(409)
       .json({ erro: 'Diagnóstico em andamento: responda a questão atual do teste rápido' });
+  }
+
+  // Qual regra serviu esta questão. O motor é determinístico, então recalcular a
+  // recomendação com os eventos de antes da resposta dá a mesma que o GET deu.
+  let regra = 'diagnostico';
+  if (tipo === 'pratica') {
+    const recomendada = selecionarProximaQuestao(antes);
+    regra = recomendada.questao.id === questao.id ? recomendada.explicacao.regra : null;
   }
 
   const correto = String(resposta_dada).trim() === String(questao.resposta_correta).trim();
@@ -181,6 +221,9 @@ router.post('/alunos/:id/respostas', exigeAluno, (req, res) => {
     tipo,
     resposta_dada: String(resposta_dada),
     correto,
+    versao_parametros: VERSAO_PARAMETROS,
+    dificuldade_servida: questao.dificuldade,
+    regra,
   });
 
   const depois = estadoDoAluno(req.aluno.id);
@@ -204,8 +247,8 @@ router.get('/professor/painel', (req, res) => {
   const senha = req.get('x-senha-professor');
   if (senha !== SENHA_PROFESSOR) return res.status(401).json({ erro: 'Senha incorreta' });
 
-  const alunos = listarAlunos().map((aluno) => {
-    const estado = estadoDoAluno(aluno.id);
+  const estados = listarAlunos().map((aluno) => ({ aluno, estado: estadoDoAluno(aluno.id) }));
+  const alunos = estados.map(({ aluno, estado }) => {
     const { proximo, ...diagnostico } = estado.diagnostico;
     return {
       ...aluno,
@@ -216,10 +259,16 @@ router.get('/professor/painel', (req, res) => {
   });
 
   res.json({
+    // Todos os cadastrados, com e sem dados suficientes: nunca esconder quem ficou de fora.
+    amostra: transparenciaAmostra(estados.map(({ estado }) => estado.eventos)),
     limiar_dominio: LIMIAR_DOMINIO,
+    acertos_para_dominio: ACERTOS_PARA_DOMINIO,
+    janela_recente: JANELA_RECENTE,
+    divergencia: DIVERGENCIA,
     erros_para_scaffolding: ERROS_PARA_SCAFFOLDING,
     limites_p_l0: LIMITES_P_L0,
     parametros: PARAMETROS,
+    versao_parametros: VERSAO_PARAMETROS,
     alunos,
   });
 });

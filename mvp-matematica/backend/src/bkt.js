@@ -18,6 +18,14 @@ export const LIMIAR_DOMINIO = 0.6;
  */
 export const LIMITES_P_L0 = { MIN: 0.1, MAX: 0.85 };
 
+/**
+ * Versão do que gera P(L): PARAMETROS, LIMITES_P_L0 e os `bkt` do seed. Mudou
+ * algum deles? Troque a versão (o teste em bkt.test.js obriga). Cada evento grava
+ * a versão em vigor, para que P(L) calculados com regras diferentes não se
+ * misturem sem ninguém perceber.
+ */
+export const VERSAO_PARAMETROS = 'v1';
+
 /** P(S)/P(G) não são globais: cada habilidade pode calibrar os seus. */
 export function parametrosDa(habilidade) {
   return { ...PARAMETROS, ...(habilidade?.bkt ?? {}) };
@@ -34,6 +42,16 @@ export function posterior(pL, correto, params = PARAMETROS) {
   return correto
     ? (pL * (1 - P_S)) / (pL * (1 - P_S) + (1 - pL) * P_G)
     : (pL * P_S) / (pL * P_S + (1 - pL) * (1 - P_G));
+}
+
+/**
+ * Chance de acertar a próxima questão segundo o modelo: quem sabe acerta se não
+ * se distrair, quem não sabe acerta no chute.
+ *
+ *   P(acerto) = P(L)(1-S) + (1-P(L))G
+ */
+export function probabilidadeAcerto(pL, params = PARAMETROS) {
+  return pL * (1 - params.P_S) + (1 - pL) * params.P_G;
 }
 
 /**

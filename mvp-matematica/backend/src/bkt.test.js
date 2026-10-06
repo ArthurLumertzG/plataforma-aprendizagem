@@ -5,10 +5,12 @@ import {
   PARAMETROS,
   LIMIAR_DOMINIO,
   LIMITES_P_L0,
+  VERSAO_PARAMETROS,
   atualizarPL,
   estimarPL0,
   parametrosDa,
   posterior,
+  probabilidadeAcerto,
   recalcularDominio,
 } from './bkt.js';
 import { HABILIDADES } from './seed-data.js';
@@ -132,4 +134,32 @@ test('recalcularDominio: usa os parâmetros calibrados da habilidade', () => {
   const habilidades = [{ id: 'h', nome: 'H', pre_requisitos: [], bkt: { P_T: 0 } }];
   const { dominio } = recalcularDominio([evento('h', true)], habilidades);
   assert.equal(dominio.h, posterior(PARAMETROS.P_L0, true));
+});
+
+test('probabilidadeAcerto: quem sabe acerta 1-S, quem não sabe acerta G', () => {
+  assert.equal(probabilidadeAcerto(1), 1 - PARAMETROS.P_S);
+  assert.equal(probabilidadeAcerto(0), PARAMETROS.P_G);
+  // 0.3 * 0.9 + 0.7 * 0.2
+  assert.equal(proximo(probabilidadeAcerto(0.3)), 0.41);
+});
+
+// Tudo que gera P(L), por versão. Mudou um parâmetro? Crie a versão nova aqui e em
+// VERSAO_PARAMETROS (bkt.js): os eventos antigos continuam marcados com a anterior.
+const PARAMETROS_POR_VERSAO = {
+  v1: {
+    padrao: { P_L0: 0.3, P_T: 0.15, P_S: 0.1, P_G: 0.2 },
+    limites_p_l0: { MIN: 0.1, MAX: 0.85 },
+    por_habilidade: {}, // nenhuma habilidade sobrescreve o padrão (campo `bkt` do seed)
+  },
+};
+
+test('VERSAO_PARAMETROS: os parâmetros em vigor são os registrados para a versão', () => {
+  const registrado = PARAMETROS_POR_VERSAO[VERSAO_PARAMETROS];
+  assert.ok(registrado, `versão ${VERSAO_PARAMETROS} sem registro em PARAMETROS_POR_VERSAO`);
+  assert.deepEqual(PARAMETROS, registrado.padrao);
+  assert.deepEqual(LIMITES_P_L0, registrado.limites_p_l0);
+  assert.deepEqual(
+    Object.fromEntries(HABILIDADES.filter((h) => h.bkt).map((h) => [h.id, h.bkt])),
+    registrado.por_habilidade,
+  );
 });

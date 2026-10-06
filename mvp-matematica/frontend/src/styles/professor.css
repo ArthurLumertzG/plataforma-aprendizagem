@@ -183,6 +183,21 @@
   font-size: 1.05rem;
 }
 
+/* Transparência da amostra: sempre visível, nunca escondida atrás de um filtro. */
+.painel__resumo .painel__amostra {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--acao);
+  border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0;
+  background: var(--superficie);
+  font-size: 0.92rem;
+}
+
+.painel__amostra strong {
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- precisa de atenção ---------- */
 .atencao h2,
 .matriz h2 {
@@ -221,6 +236,16 @@
 
 .atencao__icone {
   color: var(--atencao);
+}
+
+/* Divergência é "vale observar", não travamento: tom mais calmo que o âmbar. */
+.atencao__item--divergente {
+  border-color: #d3cbef;
+  background: var(--quase-fundo);
+}
+
+.atencao__item--divergente .atencao__icone {
+  color: var(--quase);
 }
 
 @media (max-width: 600px) {
@@ -367,6 +392,37 @@
   background: rgb(252 239 217 / 0.7);
 }
 
+.matriz__ganho {
+  display: block;
+  margin-top: 6px;
+}
+
+/* ---------- ganho estimado (seta + texto, nunca só cor) ---------- */
+.ganho {
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ganho--sobe {
+  color: var(--acerto);
+}
+
+.ganho--desce {
+  color: var(--quase);
+}
+
+.ganho--igual,
+.ganho--vazio {
+  color: var(--tinta-3);
+}
+
+.ganho--vazio {
+  font-weight: 400;
+  white-space: normal;
+}
+
 /* ---------- detalhe do aluno ---------- */
 .detalhe {
   display: grid;
@@ -433,6 +489,61 @@
   border-top: 1px solid rgb(47 102 171 / 0.2);
   font-family: var(--fonte-crianca);
   font-size: 1.05rem;
+}
+
+.detalhe__rolagem {
+  overflow-x: auto;
+}
+
+/* Domínio, ganho e acertos recentes lado a lado */
+.lado-a-lado {
+  width: 100%;
+  min-width: 340px;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.lado-a-lado th,
+.lado-a-lado td {
+  padding: 8px 6px;
+  border-top: 1px solid var(--linha);
+  text-align: left;
+  vertical-align: top;
+}
+
+.lado-a-lado thead th {
+  border-top: 0;
+  color: var(--tinta-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lado-a-lado tbody th {
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.lado-a-lado .estado {
+  display: flex;
+  margin-top: 3px;
+  font-size: 0.76rem;
+}
+
+.lado-a-lado__numero {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lado-a-lado__previsto {
+  display: block;
+  color: var(--tinta-3);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lado-a-lado__vazio {
+  color: var(--tinta-3);
 }
 
 .detalhe__mapa {

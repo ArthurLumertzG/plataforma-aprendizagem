@@ -39,6 +39,15 @@ const CAMINHOS = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  // Passou do limiar, mas o domínio ainda não foi confirmado por acertos seguidos.
+  pendente: <circle cx="12" cy="12" r="7" strokeDasharray="3.2 2.6" />,
+  // Acertos longe do que o modelo previa: vale investigar.
+  lupa: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="M15 15l5 5" />
+    </>
+  ),
   sair: <path d="M14 5h4v14h-4M10 8l-4 4 4 4M6 12h9" />,
   cadeado: (
     <>
