@@ -89,6 +89,85 @@ export function desempenhoRecente(eventos, trajetoria, habilidadeId, params, jan
   };
 }
 
+/**
+ * Tempo até o domínio: quantas respostas de prática da habilidade até o primeiro
+ * domínio confirmado. null se ainda não chegou lá.
+ */
+export function tempoAteDominio(eventos, trajetoria, habilidadeId) {
+  let respostas = 0;
+  let acertos = 0;
+  for (const e of praticaDa(eventos, habilidadeId)) {
+    respostas++;
+    acertos = e.correto ? acertos + 1 : 0;
+    if (dominioRobusto(trajetoria[e.id].p_l_depois, acertos)) return respostas;
+  }
+  return null;
+}
+
+/**
+ * Retenção: a criança ainda acerta uma habilidade que deixou dominada, quando
+ * volta a ela depois de praticar outras? Conta só a primeira resposta de cada
+ * volta, porque as seguintes já são prática de novo.
+ *
+ * Não depende da regra que trouxe a criança de volta: hoje é o reforço, depois
+ * será a repetição espaçada. Na demo as voltas acontecem minutos depois, então
+ * isto mede resistência à interferência de outras habilidades, ainda não
+ * esquecimento ao longo de dias.
+ *
+ * @returns {Record<string, {retornos: number, acertos: number}>} Só habilidades com volta.
+ */
+export function retencaoPorHabilidade(eventos, trajetoria) {
+  const estado = {}; // por habilidade: acertos seguidos e se está dominada agora
+  const retencao = {};
+  let anterior = null;
+
+  for (const e of eventos) {
+    if (e.tipo !== 'pratica' || !trajetoria[e.id]) continue;
+    const h = (estado[e.habilidade_id] ??= { acertos: 0, dominada: false });
+
+    // Saiu dominando, praticou outra coisa e voltou agora.
+    if (anterior !== null && anterior !== e.habilidade_id && h.dominada) {
+      const r = (retencao[e.habilidade_id] ??= { retornos: 0, acertos: 0 });
+      r.retornos++;
+      if (e.correto) r.acertos++;
+    }
+
+    h.acertos = e.correto ? h.acertos + 1 : 0;
+    h.dominada = dominioRobusto(trajetoria[e.id].p_l_depois, h.acertos);
+    anterior = e.habilidade_id;
+  }
+  return retencao;
+}
+
+export function mediana(valores) {
+  if (valores.length === 0) return null;
+  const ordenados = [...valores].sort((a, b) => a - b);
+  const meio = Math.floor(ordenados.length / 2);
+  return ordenados.length % 2 ? ordenados[meio] : (ordenados[meio - 1] + ordenados[meio]) / 2;
+}
+
+/**
+ * Tempo até o domínio na turma, para uma habilidade. A mediana só existe para quem
+ * chegou lá, então o resumo sempre diz quantos praticaram e quantos chegaram:
+ * sem isso, a métrica repetiria o viés de sobrevivência.
+ *
+ * @param {Array<number|null>} valores tempoAteDominio de cada aluno que praticou.
+ */
+export function tempoAteDominioDaTurma(valores) {
+  const chegaram = valores.filter((v) => v !== null);
+  return { praticaram: valores.length, chegaram: chegaram.length, mediana: mediana(chegaram) };
+}
+
+/** Soma as voltas de todos os alunos numa habilidade. */
+export function retencaoDaTurma(porAluno) {
+  const comVolta = porAluno.filter((r) => r && r.retornos > 0);
+  return {
+    alunos: comVolta.length,
+    retornos: comVolta.reduce((s, r) => s + r.retornos, 0),
+    acertos: comVolta.reduce((s, r) => s + r.acertos, 0),
+  };
+}
+
 export function respostasDePratica(eventos) {
   return eventos.filter((e) => e.tipo === 'pratica').length;
 }

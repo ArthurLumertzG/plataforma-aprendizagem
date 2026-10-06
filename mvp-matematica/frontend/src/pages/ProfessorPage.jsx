@@ -65,6 +65,71 @@ function estadoDa(h) {
   return null;
 }
 
+const numero = (v) => v.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+/**
+ * Rodapé da matriz: tempo até dominar e retenção da turma, por habilidade. Sempre
+ * com quantos alunos entraram na conta, porque só quem chegou lá tem um tempo.
+ */
+function ResumoTurma({ habilidades, turma }) {
+  const porId = Object.fromEntries(turma.map((t) => [t.habilidade_id, t]));
+  return (
+    <tfoot>
+      <tr>
+        <th scope="row">
+          Até dominar
+          <span className="matriz__situacao">mediana da turma</span>
+        </th>
+        {habilidades.map((h) => {
+          const { praticaram, chegaram, mediana } = porId[h.habilidade_id].ate_dominio;
+          return (
+            <td key={h.habilidade_id}>
+              {praticaram === 0 ? (
+                <span className="resumo-turma__vazio">sem prática</span>
+              ) : (
+                <>
+                  <span className="resumo-turma__valor">
+                    {chegaram === 0 ? 'ninguém ainda' : plural(numero(mediana), 'resposta', 'respostas')}
+                  </span>
+                  <span className="resumo-turma__base">
+                    {chegaram} de {praticaram} que praticaram
+                  </span>
+                </>
+              )}
+            </td>
+          );
+        })}
+      </tr>
+      <tr>
+        <th scope="row">
+          Retenção
+          <span className="matriz__situacao">ao voltar depois de dominar</span>
+        </th>
+        {habilidades.map((h) => {
+          const { alunos, retornos, acertos } = porId[h.habilidade_id].retencao;
+          return (
+            <td key={h.habilidade_id}>
+              {retornos === 0 ? (
+                <span className="resumo-turma__vazio">sem voltas ainda</span>
+              ) : (
+                <>
+                  <span className="resumo-turma__valor">
+                    {acertos} de {retornos}
+                  </span>
+                  <span className="resumo-turma__base">
+                    voltas certas, {plural(alunos, 'aluno', 'alunos')}
+                  </span>
+                </>
+              )}
+            </td>
+          );
+        })}
+      </tr>
+    </tfoot>
+  );
+}
+
 // ---------- login ----------
 
 function Entrada({ aoEntrar, erro }) {
@@ -190,7 +255,7 @@ function Atencao({ alunos, aoVer }) {
   );
 }
 
-function Matriz({ alunos, limiar, acertosParaDominio, selecionado, aoSelecionar }) {
+function Matriz({ alunos, turma, limiar, acertosParaDominio, selecionado, aoSelecionar }) {
   const habilidades = alunos[0]?.dominio ?? [];
 
   return (
@@ -293,6 +358,7 @@ function Matriz({ alunos, limiar, acertosParaDominio, selecionado, aoSelecionar 
               </tr>
             ))}
           </tbody>
+          <ResumoTurma habilidades={habilidades} turma={turma} />
         </table>
       </div>
     </section>
@@ -330,6 +396,16 @@ function LadoALado({ aluno, janela, acertosParaDominio }) {
                   <span className="estado estado--confirmar">
                     <Icone nome="pendente" tamanho={14} /> a confirmar ({h.acertos_seguidos} de{' '}
                     {acertosParaDominio} acertos seguidos)
+                  </span>
+                )}
+                {h.ate_dominio !== null && (
+                  <span className="lado-a-lado__extra">
+                    dominou em {plural(h.ate_dominio, 'resposta', 'respostas')}
+                  </span>
+                )}
+                {h.retencao.retornos > 0 && (
+                  <span className="lado-a-lado__extra">
+                    ao voltar, acertou {h.retencao.acertos} de {h.retencao.retornos}
                   </span>
                 )}
               </th>
@@ -572,6 +648,7 @@ export default function ProfessorPage() {
           <Atencao alunos={painel.alunos} aoVer={setSelecionado} />
           <Matriz
             alunos={painel.alunos}
+            turma={painel.turma}
             limiar={painel.limiar_dominio}
             acertosParaDominio={painel.acertos_para_dominio}
             selecionado={selecionado}

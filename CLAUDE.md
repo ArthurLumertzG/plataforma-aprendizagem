@@ -19,7 +19,7 @@ Existe uma **demo local aprovada** para mostrar a personalização funcionando. 
 - Diagnóstico inicial: 2 itens por habilidade, que inicializam `P(L0)`.
 - Motor de recomendação (`backend/src/motor.js`): zona proximal, reforço da habilidade mais frágil, dificuldade pelo P(L) e scaffolding com dica após 2 erros seguidos.
 - Painel do professor com alertas de travamento e o porquê de cada recomendação.
-- Métricas da pesquisa aplicada (`backend/src/metricas.js`): transparência da amostra, domínio confirmado (P(L) ≥ limiar + 2 acertos seguidos, só no painel), ganho estimado e taxa de acerto recente ao lado do acerto previsto, com alerta de divergência. Detalhes em `mvp-matematica/README.md`, seção "Métricas do painel".
+- Métricas da pesquisa aplicada (`backend/src/metricas.js`): transparência da amostra, domínio confirmado (P(L) ≥ limiar + 2 acertos seguidos, só no painel), ganho estimado e taxa de acerto recente ao lado do acerto previsto, com alerta de divergência, tempo até o domínio (mediana da turma, sempre com quantos chegaram) e retenção ao voltar a uma habilidade dominada. Detalhes em `mvp-matematica/README.md`, seção "Métricas do painel".
 - Eventos com auditoria: `versao_parametros` do BKT, dificuldade servida e regra do motor que escolheu a questão.
 - Interface "Quadriculado" (nome provisório): página institucional, área da criança com material concreto no scaffolding, leitura em voz alta e ajustes de leitura, e painel com matriz aluno × habilidade e mapa de pré-requisitos. Decisões em `mvp-matematica/README.md`, seção "Interface".
 - Testes por regra e com alunos sintéticos (`npm test` em `backend/`).

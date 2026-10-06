@@ -166,6 +166,22 @@ acertar muito em questões fáceis demais não é aprender.
   perto de 0% nesses casos e só dispara quando o modelo errou de forma consistente.
   Se a habilidade já travou, o painel mostra só o travamento, para não repetir o
   alerta.
+- **Tempo até o domínio.** Quantas respostas de prática da habilidade até o primeiro
+  domínio confirmado. Perder o domínio depois não muda esse número. No rodapé da
+  matriz aparece a **mediana da turma**, sempre acompanhada de "N de M que
+  praticaram": o tempo só existe para quem chegou lá, e a mediana sozinha esconderia
+  quem não chegou (o mesmo viés de sobrevivência). Usamos mediana e não média porque
+  a turma é pequena e um aluno lento puxaria a média.
+- **Retenção.** A criança ainda acerta uma habilidade que deixou dominada quando
+  volta a ela depois de praticar outras? Conta só a **primeira resposta de cada
+  volta**, porque as seguintes já são prática de novo. Só entra quem saiu dominando
+  (se a criança errou antes de sair, a volta não mede retenção). Não depende da regra
+  que trouxe a criança de volta: hoje é o reforço, depois será a repetição espaçada.
+  **Limitação:** na demo as voltas acontecem minutos depois, então isto mede
+  resistência à interferência de outras habilidades, ainda não esquecimento ao longo
+  de dias. A comparação "taxa no momento do domínio" do documento de pesquisa seria
+  sempre 100% (o domínio exige 2 acertos seguidos), então a métrica é só a taxa nas
+  voltas.
 
 Os limiares (2 acertos, 10 respostas, 0,3 e 5) são **provisórios**, sem validação
 pedagógica. São constantes no topo de `metricas.js`.
@@ -211,7 +227,8 @@ provisório e fica numa constante só (`MARCA`, em `frontend/src/lib/textos.js`)
 
 **Painel do professor**: quantos alunos têm dados para análise, alertas de travamento e
 de divergência no topo, matriz aluno × habilidade (P(L), limiar, ponto de partida do
-teste rápido, estado e ganho) e, para o aluno selecionado, a próxima recomendação com a
+teste rápido, estado e ganho) com um rodapé da turma (tempo até dominar e retenção)
+e, para o aluno selecionado, a próxima recomendação com a
 regra e o motivo, a tabela "habilidade por habilidade" (domínio, ganho e últimas 10 lado
 a lado), o mapa de pré-requisitos com o P(L) em cada nó e as últimas respostas. A
 recomendação vem de `GET /proxima-questao`, que não grava nada. A matriz fica na ordem
@@ -242,9 +259,9 @@ contagem_ate_10 ─┬─→ adicao_ate_10 ────┬─→ adicao_com_reag
 | GET | `/api/habilidades` | Grafo de habilidades + pré-requisitos |
 | GET | `/api/alunos/:id/proxima-questao` | Item do teste rápido ou questão recomendada, com a regra que a escolheu |
 | POST | `/api/alunos/:id/respostas` | Body `{ questao_id, resposta_dada }`; registra o evento e devolve o P(L) antes/depois. Durante o teste rápido, responde 409 se a questão não for a atual |
-| GET | `/api/alunos/:id/dominio` | Por habilidade: P(L), P(L0), ganho, domínio confirmado, últimas respostas com o acerto previsto e alertas. Mais o progresso do teste rápido |
+| GET | `/api/alunos/:id/dominio` | Por habilidade: P(L), P(L0), ganho, domínio confirmado, últimas respostas com o acerto previsto, tempo até o domínio, retenção e alertas. Mais o progresso do teste rápido |
 | GET | `/api/alunos/:id/historico` | Últimas respostas (`?limite=10`), com a regra e a dificuldade de cada uma |
-| GET | `/api/professor/painel` | Tudo que o painel precisa, incluindo `amostra` (`total`, `com_dados`, `minimo`) e `versao_parametros`; exige header `x-senha-professor` |
+| GET | `/api/professor/painel` | Tudo que o painel precisa, incluindo `amostra` (`total`, `com_dados`, `minimo`), `turma` (tempo até o domínio e retenção por habilidade) e `versao_parametros`; exige header `x-senha-professor` |
 
 ## Estrutura
 
@@ -256,7 +273,7 @@ mvp-matematica/
 │   │   ├── db.js          # SQLite: esquema, migração, seed e eventos
 │   │   ├── bkt.js         # modelo do aluno: BKT, P(L0) e recálculo a partir dos eventos
 │   │   ├── motor.js       # motor de recomendação: diagnóstico + 4 regras
-│   │   ├── metricas.js    # métricas do painel: domínio confirmado, ganho, divergência, amostra
+│   │   ├── metricas.js    # métricas do painel: domínio confirmado, ganho, divergência, tempo até o domínio, retenção, amostra
 │   │   ├── *.test.js      # testes do BKT, de cada regra, das métricas e com alunos sintéticos
 │   │   ├── routes.js
 │   │   └── server.js
@@ -283,6 +300,6 @@ Autenticação real, consentimento parental/LGPD, calibração dos parâmetros d
 dados reais, uso do tempo de resposta e das dicas como força da evidência (decisão
 ainda em aberto), repetição espaçada, progressão de dificuldade por sucesso
 consistente, modo offline e deploy em nuvem. Das métricas da pesquisa aplicada, ainda
-faltam tempo até o domínio, retenção (depende da repetição espaçada), acurácia do
-modelo (AUC e calibração, obrigatória antes de apresentar resultados do piloto) e
-engajamento (depende da entidade Sessão). São iterações futuras, não omissões.
+faltam a acurácia do modelo (AUC e calibração, obrigatória antes de apresentar
+resultados do piloto) e o engajamento (depende da entidade Sessão). A retenção já é
+medida, mas só ganha o sentido de "esquecimento" quando houver repetição espaçada. São iterações futuras, não omissões.

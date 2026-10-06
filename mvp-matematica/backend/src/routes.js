@@ -16,6 +16,10 @@ import {
   desempenhoRecente,
   dominioRobusto,
   ganhoAprendizagem,
+  retencaoDaTurma,
+  retencaoPorHabilidade,
+  tempoAteDominio,
+  tempoAteDominioDaTurma,
   transparenciaAmostra,
 } from './metricas.js';
 import {
@@ -67,9 +71,13 @@ function estadoDoAluno(alunoId) {
  * (limiar + acertos seguidos), o único que o painel mostra como "dominada".
  */
 function resumoDominio({ habilidades, dominio, pL0, eventos, trajetoria, diagnostico }) {
+  const retencao = retencaoPorHabilidade(eventos, trajetoria);
   return habilidades.map((h) => {
     const errosSeguidos = contarErrosSeguidos(eventos, h.id);
     const acertos = acertosSeguidos(eventos, h.id);
+    const respostasPratica = eventos.filter(
+      (e) => e.tipo === 'pratica' && e.habilidade_id === h.id,
+    ).length;
     const p_l0 = diagnostico.concluido ? pL0[h.id] : null;
     return {
       habilidade_id: h.id,
@@ -82,6 +90,9 @@ function resumoDominio({ habilidades, dominio, pL0, eventos, trajetoria, diagnos
       acertos_seguidos: acertos,
       dominada: dominioRobusto(dominio[h.id], acertos),
       recente: desempenhoRecente(eventos, trajetoria, h.id, parametrosDa(h)),
+      respostas_pratica: respostasPratica,
+      ate_dominio: tempoAteDominio(eventos, trajetoria, h.id),
+      retencao: retencao[h.id] ?? { retornos: 0, acertos: 0 },
       erros_seguidos: errosSeguidos,
       travou: errosSeguidos >= ERROS_PARA_SCAFFOLDING,
     };
@@ -258,9 +269,23 @@ router.get('/professor/painel', (req, res) => {
     };
   });
 
+  // Por habilidade, somando a turma. Só entra quem praticou a habilidade, e o
+  // resumo diz quantos foram: a mediana sozinha esconderia quem não chegou lá.
+  const turma = listarHabilidades().map((h) => {
+    const daHabilidade = alunos
+      .map((a) => a.dominio.find((d) => d.habilidade_id === h.id))
+      .filter((d) => d.respostas_pratica > 0);
+    return {
+      habilidade_id: h.id,
+      ate_dominio: tempoAteDominioDaTurma(daHabilidade.map((d) => d.ate_dominio)),
+      retencao: retencaoDaTurma(daHabilidade.map((d) => d.retencao)),
+    };
+  });
+
   res.json({
     // Todos os cadastrados, com e sem dados suficientes: nunca esconder quem ficou de fora.
     amostra: transparenciaAmostra(estados.map(({ estado }) => estado.eventos)),
+    turma,
     limiar_dominio: LIMIAR_DOMINIO,
     acertos_para_dominio: ACERTOS_PARA_DOMINIO,
     janela_recente: JANELA_RECENTE,

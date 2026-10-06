@@ -546,6 +546,38 @@
   color: var(--tinta-3);
 }
 
+.lado-a-lado__extra {
+  display: block;
+  margin-top: 2px;
+  color: var(--tinta-3);
+  font-size: 0.76rem;
+  font-weight: 400;
+}
+
+/* Rodapé da matriz: tempo até dominar e retenção da turma */
+.matriz__tabela tfoot th,
+.matriz__tabela tfoot td {
+  background: var(--superficie-2);
+  vertical-align: top;
+}
+
+.matriz__tabela tfoot th {
+  font-size: 0.86rem;
+}
+
+.resumo-turma__valor {
+  display: block;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.resumo-turma__base,
+.resumo-turma__vazio {
+  display: block;
+  color: var(--tinta-3);
+  font-size: 0.8rem;
+}
+
 .detalhe__mapa {
   overflow-x: auto;
   padding: 6px 0 4px;
