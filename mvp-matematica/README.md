@@ -43,43 +43,49 @@ npm run avaliar-modelo            # da raiz (ou dentro de backend/)
 npm run avaliar-modelo -- --json  # o mesmo relatório em JSON
 ```
 
-## Publicar a interface na Vercel (opcional)
+## Publicar online na Vercel (interface + API + banco)
 
-O backend usa SQLite em arquivo, então **ele não roda na Vercel** (o filesystem das
-Functions é efêmero). O arranjo possível é: interface na Vercel, API na sua máquina.
+Tudo roda na Vercel, sem nada ligado no seu computador. O `vercel.json` desta pasta
+declara dois **serviços** que saem juntos no mesmo deploy e no mesmo endereço: a
+**interface** (Vite, em `frontend/`) e a **API** (Express, em `backend/`, entrada
+`src/app.js`, que vira uma Vercel Function). Tudo que começa com `/api` vai para a
+API; o resto, para a interface.
 
-Na Vercel, ao importar o repositório, defina:
+Os dados ficam num **Postgres da Neon**. A API escolhe o banco sozinha: com a
+variável `DATABASE_URL`, usa o Postgres; sem ela, o SQLite local de sempre. Por
+isso `npm run dev` continua funcionando offline e sem configurar nada. Num deploy da
+Vercel sem `DATABASE_URL`, a API responde com um erro explicando que falta conectar
+o banco (SQLite lá perderia os dados, porque o disco das Functions é temporário).
 
-- **Root Directory:** `mvp-matematica/frontend` (sem isso o deploy dá 404, porque a
-  raiz do repositório não é um app)
-- **Environment Variable:** `VITE_API_URL` com a URL pública da sua API
+Passo a passo, uma vez só:
 
-O resto (framework Vite, `npm run build`, saída em `dist` e o rewrite da SPA) já está em
-`frontend/vercel.json`. Salve esse arquivo **sem BOM**: a Vercel recusa um `vercel.json` com BOM
-como inválido. Sem `VITE_API_URL`, a interface abre, mas mostra o aviso de que a API não
-respondeu JSON.
+1. **Root Directory:** no projeto da Vercel, em *Settings → Build and Deployment*,
+   troque o Root Directory de `mvp-matematica/frontend` para **`mvp-matematica`**
+   (onde está o `vercel.json`). Deixe o Framework Preset como a Vercel detectar.
+2. **Banco:** em *Storage* (ou *Marketplace*), crie um banco **Neon** e conecte ao
+   projeto, marcando os ambientes Production e Preview. A integração cria a
+   `DATABASE_URL` sozinha.
+3. **Variáveis de ambiente** (*Settings → Environment Variables*):
+   - **apague `VITE_API_URL`**, que apontava para o túnel. Agora a interface chama
+     `/api` no próprio endereço;
+   - crie **`SENHA_PROFESSOR`** com uma senha sua (sem ela, vale `professor123`).
+4. **Deploy:** faça um push (ou *Redeploy*). Confira em
+   `https://<seu-projeto>.vercel.app/api/saude`: a resposta deve ser
+   `{"ok":true,"banco":"postgres"}`.
 
-Para a API da sua máquina ganhar uma URL pública HTTPS, use um túnel — com o
-backend já rodando em `npm run dev`:
+Na primeira requisição, a API cria as tabelas e copia o conteúdo do seed para o
+banco. Isso se repete só quando `seed-data.js` muda, guiado por um hash do
+conteúdo. O banco começa vazio de respostas: o que está no SQLite do seu computador
+não é levado. Para rodar a acurácia do modelo contra o banco online, copie a
+`DATABASE_URL` da Vercel e rode `DATABASE_URL=... npm run avaliar-modelo`.
 
-```bash
-npx cloudflared tunnel --url http://localhost:3001
-```
+O endereço é público: qualquer pessoa com o link vê a lista de apelidos e pode
+cadastrar um novo. Para a demonstração, com alunos fictícios, isso é aceitável. Antes
+de usar com crianças reais vêm a autenticação e o consentimento (LGPD).
 
-Se ele ficar repetindo `Failed to dial a quic connection`, a sua rede bloqueia UDP
-(comum em redes de faculdade e empresa). Force o túnel por TCP:
-
-```bash
-npx cloudflared tunnel --protocol http2 --url http://localhost:3001
-```
-
-Copie a URL `https://....trycloudflare.com` que ele imprime para `VITE_API_URL` e
-refaça o deploy. A demo fica no ar enquanto o seu computador e o túnel estiverem
-ligados. Apontar `VITE_API_URL` para `http://localhost:3001` também funciona, mas
-só no próprio computador que roda o backend.
-
-Antes de expor a API, troque a senha do painel: `SENHA_PROFESSOR=algumacoisa`. Os
-dados são de alunos fictícios — não use dados reais de crianças nesta demo.
+**Desenvolvimento local** continua igual (`npm run dev`, SQLite). O `vercel dev` não
+inicia a interface no Windows, porque o comando dele usa `$PORT` e o `cmd` não
+expande essa variável. Use o `npm run dev`, ou o `vercel dev` no WSL, macOS ou Linux.
 
 ## Como funciona a personalização
 
@@ -337,6 +343,7 @@ são soma: o parser da interface lê isso como adição e mostraria o apoio erra
 
 | Método | Rota | Uso |
 |---|---|---|
+| GET | `/api/saude` | `{ ok, banco }`: confirma que a API subiu e qual banco está em uso (`postgres` ou `sqlite`) |
 | GET | `/api/alunos` | Lista os alunos |
 | POST | `/api/alunos` | Body `{ nome }` (apelido, até 30 caracteres); cria um aluno novo |
 | GET | `/api/habilidades` | Grafo de habilidades + pré-requisitos |
@@ -353,16 +360,20 @@ mvp-matematica/
 ├── backend/
 │   ├── src/
 │   │   ├── seed-data.js   # 11 habilidades, 5 alunos, 88 questões
-│   │   ├── db.js          # SQLite: esquema, migração, seed e eventos
 │   │   ├── bkt.js         # modelo do aluno: BKT, P(L0) e recálculo a partir dos eventos
 │   │   ├── motor.js       # motor: teste rápido, scaffolding, revisão, zona proximal/progressão, reforço
 │   │   ├── metricas.js    # métricas do painel: domínio confirmado, ganho, divergência, tempo até o domínio, retenção, amostra
 │   │   ├── avaliacao.js   # acurácia do modelo: AUC, Brier, calibração, por habilidade e por regra
 │   │   ├── *.test.js      # testes do BKT, de cada regra, das métricas, da avaliação e com alunos sintéticos
-│   │   ├── routes.js
-│   │   └── server.js
+│   │   ├── routes.js      # rotas da API (assíncronas)
+│   │   ├── app.js         # o app Express; a entrada que a Vercel roda
+│   │   ├── server.js      # só para rodar localmente (app.listen)
+│   │   ├── repositorio.js # escolhe o banco: Postgres com DATABASE_URL, SQLite sem
+│   │   ├── db-sqlite.js   # SQLite local
+│   │   ├── db-postgres.js # Postgres (Neon); testado com PGlite
+│   │   └── conteudo.js    # habilidades e questões servidas do seed
 │   ├── scripts/
-│   │   └── avaliar-modelo.js  # relatório de acurácia sobre o banco local
+│   │   └── avaliar-modelo.js  # relatório de acurácia sobre o banco da API
 │   └── package.json
 ├── frontend/
 │   ├── src/
@@ -372,6 +383,7 @@ mvp-matematica/
 │   │   ├── styles/        # base (tokens), inicio, crianca, professor
 │   │   └── App.jsx
 │   └── package.json
+├── vercel.json            # deploy: serviços interface + api no mesmo endereço
 └── README.md
 ```
 
@@ -384,7 +396,7 @@ fictícios, nada é migrado: as respostas já dadas se perdem.
 
 Autenticação real, consentimento parental/LGPD, calibração dos parâmetros do BKT com
 dados reais, uso do tempo de resposta e das dicas como força da evidência (decisão
-ainda em aberto), revisão espaçada medida em dias (hoje é em respostas), modo offline
-e deploy em nuvem. Das métricas da pesquisa aplicada, ainda falta o engajamento
-(conclusão de sessão e abandono), que depende da entidade Sessão. São iterações
-futuras, não omissões.
+ainda em aberto), revisão espaçada medida em dias (hoje é em respostas) e modo
+offline. Das métricas da pesquisa aplicada, ainda falta o engajamento (conclusão de
+sessão e abandono), que depende da entidade Sessão. São iterações futuras, não
+omissões.

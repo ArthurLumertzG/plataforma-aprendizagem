@@ -30,13 +30,13 @@ Ela é **deliberadamente mais simples** que a arquitetura-alvo descrita no resto
 
 | Arquitetura-alvo (este arquivo) | Demo atual |
 |---|---|
-| Next.js full-stack + PostgreSQL | Express + SQLite (`backend/`) e React/Vite (`frontend/`), em JavaScript |
+| Next.js full-stack + PostgreSQL | Express (`backend/`) e React/Vite (`frontend/`), em JavaScript. Postgres (Neon) em produção, SQLite local quando não há `DATABASE_URL` |
 | Grafo de senso numérico (rascunho abaixo) | 11 habilidades do rascunho, sem correspondência um a um. Ainda sem validação dos conteudistas |
 | 7 entidades, com Sessão e Consentimento | Aluno, Habilidade, Questão e Evento. Sem sessão nem consentimento |
 | Autenticação + consentimento parental | Senha única no painel. Só alunos fictícios |
 | Repetição espaçada em tempo | Intervalos em respostas de prática (8 → 16 → 32), porque a demo acontece em minutos |
 | Tempo de resposta e dicas modulam S/G | Não são coletados (decisão em aberto) |
-| PWA offline-first | Só online |
+| PWA offline-first | Só online. Deploy na Vercel com Services (interface + API no mesmo endereço) |
 
 Ao evoluir a demo, mantenha as fronteiras do modelo do aluno e do motor: `bkt.js` não escolhe itens e `motor.js` não calcula BKT. Atualize o `mvp-matematica/README.md` junto com o código.
 

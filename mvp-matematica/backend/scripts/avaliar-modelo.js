@@ -1,21 +1,26 @@
-// Relatório de acurácia do modelo do aluno sobre o banco local (data/mvp.db):
+// Relatório de acurácia do modelo do aluno sobre o banco da API:
 // o P(L) prevê o acerto seguinte? Obrigatório antes de apresentar resultados do piloto.
 //
 //   npm run avaliar-modelo            relatório legível
 //   npm run avaliar-modelo -- --json  o mesmo relatório em JSON, para guardar
 //
-// Abrir o banco aplica a migração de esquema, exatamente como subir a API.
+// Lê o mesmo banco da API: o SQLite local ou, com DATABASE_URL definido, o Postgres
+// (por exemplo, o da Neon em produção). Abrir o banco aplica a migração de esquema,
+// exatamente como subir a API.
 
 import { avaliarModelo } from '../src/avaliacao.js';
 import { VERSAO_PARAMETROS } from '../src/bkt.js';
-import { eventosDoAluno, listarAlunos, listarHabilidades } from '../src/db.js';
+import { listarHabilidades } from '../src/conteudo.js';
+import { obterRepositorio } from '../src/repositorio.js';
 
 /** Abaixo disso o AUC oscila demais para tirar conclusão. Referência, não regra. */
 const AMOSTRA_PEQUENA = 200;
 
 const habilidades = listarHabilidades();
+const repo = await obterRepositorio();
+const eventosPorAluno = await repo.eventosPorAluno();
 const relatorio = avaliarModelo(
-  listarAlunos().map((a) => eventosDoAluno(a.id)),
+  (await repo.listarAlunos()).map((a) => eventosPorAluno.get(a.id) ?? []),
   habilidades,
 );
 

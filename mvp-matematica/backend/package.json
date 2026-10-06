@@ -10,8 +10,14 @@
     "avaliar-modelo": "node scripts/avaliar-modelo.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0",
+    "@neondatabase/serverless": "^1.2.0",
     "cors": "^2.8.5",
     "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.10.0"
   }
 }

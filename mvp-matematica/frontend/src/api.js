@@ -1,6 +1,7 @@
-// Em desenvolvimento a base fica vazia: o front chama /api/... e o proxy do Vite
-// repassa para o Express local. Em produção (Vercel) o backend está em outra
-// máquina, então a URL vem de VITE_API_URL — ex.: https://algo.trycloudflare.com
+// A base fica vazia: o front chama /api/... no mesmo endereço. Em desenvolvimento o
+// proxy do Vite repassa para o Express local; na Vercel, o vercel.json manda /api
+// para o serviço da API. VITE_API_URL só serve para apontar para uma API em outro
+// endereço (por exemplo, um túnel); no deploy com os dois serviços, deixe vazia.
 const BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 
 const url = (caminho) => `${BASE}${caminho}`;
@@ -10,10 +11,10 @@ async function json(resposta) {
     const corpo = await resposta.json().catch(() => ({}));
     throw new Error(corpo.erro || `Erro ${resposta.status}`);
   }
-  // Na Vercel sem VITE_API_URL, /api/... cai no rewrite da SPA e volta o index.html.
+  // Se /api/... não chegar à API (deploy só da interface), volta o index.html da SPA.
   if (!resposta.headers.get('content-type')?.includes('application/json')) {
     throw new Error(
-      'A API não respondeu JSON. Em produção, configure VITE_API_URL com a URL do backend',
+      'A API não respondeu JSON. Confira se o deploy inclui o serviço da API (vercel.json)',
     );
   }
   return resposta.json();

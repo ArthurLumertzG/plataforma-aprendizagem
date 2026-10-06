@@ -31,22 +31,17 @@ import {
   estadoDiagnostico,
   selecionarProximaQuestao,
 } from './motor.js';
-import {
-  buscarAluno,
-  buscarQuestao,
-  criarAluno,
-  eventosDoAluno,
-  listarAlunos,
-  listarHabilidades,
-  listarQuestoes,
-  registrarEvento,
-} from './db.js';
+import { buscarQuestao, listarHabilidades, listarQuestoes } from './conteudo.js';
+import { obterRepositorio } from './repositorio.js';
 
 export const SENHA_PROFESSOR = process.env.SENHA_PROFESSOR || 'professor123';
 
 const TAMANHO_MAX_NOME = 30;
 
 export const router = Router();
+
+/** Express 4 não captura erros de funções assíncronas: repassa ao tratador de erro. */
+const rota = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 
 /** A criança nunca recebe a resposta correta; a dica só vem no scaffolding. */
 function questaoParaAluno(q, { comDica = false } = {}) {
@@ -58,10 +53,9 @@ function questaoParaAluno(q, { comDica = false } = {}) {
  * Tudo que se sabe do aluno, derivado dos eventos dele. Rotas só chamam isto
  * e formatam a resposta: P(L) nunca é lido de uma tabela.
  */
-function estadoDoAluno(alunoId) {
+function estadoDe(eventos) {
   const habilidades = listarHabilidades();
   const questoes = listarQuestoes();
-  const eventos = eventosDoAluno(alunoId);
   const { dominio, pL0, trajetoria } = recalcularDominio(eventos, habilidades);
   const diagnostico = estadoDiagnostico(eventos, habilidades, questoes);
   return { habilidades, questoes, eventos, dominio, pL0, trajetoria, diagnostico };
@@ -128,183 +122,234 @@ function historicoRecente({ eventos, trajetoria }, limite) {
     }));
 }
 
-function exigeAluno(req, res, next) {
-  const aluno = buscarAluno(Number(req.params.id));
+async function estadoDoAluno(alunoId) {
+  const repo = await obterRepositorio();
+  return estadoDe(await repo.eventosDoAluno(alunoId));
+}
+
+const exigeAluno = rota(async (req, res, next) => {
+  const id = Number(req.params.id);
+  const aluno = Number.isInteger(id) && (await (await obterRepositorio()).buscarAluno(id));
   if (!aluno) return res.status(404).json({ erro: 'Aluno não encontrado' });
   req.aluno = aluno;
   next();
-}
-
-router.get('/alunos', (_req, res) => {
-  res.json(listarAlunos());
 });
 
-router.post('/alunos', (req, res) => {
-  const nome = String(req.body?.nome ?? '').trim();
-  if (!nome || nome.length > TAMANHO_MAX_NOME) {
-    return res
-      .status(400)
-      .json({ erro: `Informe um apelido de 1 a ${TAMANHO_MAX_NOME} caracteres` });
-  }
-  res.status(201).json(criarAluno(nome));
-});
+router.get(
+  '/saude',
+  rota(async (_req, res) => {
+    const repo = await obterRepositorio();
+    res.json({ ok: true, banco: repo.banco });
+  }),
+);
+
+router.get(
+  '/alunos',
+  rota(async (_req, res) => {
+    res.json(await (await obterRepositorio()).listarAlunos());
+  }),
+);
+
+router.post(
+  '/alunos',
+  rota(async (req, res) => {
+    const nome = String(req.body?.nome ?? '').trim();
+    if (!nome || nome.length > TAMANHO_MAX_NOME) {
+      return res
+        .status(400)
+        .json({ erro: `Informe um apelido de 1 a ${TAMANHO_MAX_NOME} caracteres` });
+    }
+    res.status(201).json(await (await obterRepositorio()).criarAluno(nome));
+  }),
+);
 
 router.get('/habilidades', (_req, res) => {
   res.json(listarHabilidades());
 });
 
-router.get('/alunos/:id/dominio', exigeAluno, (req, res) => {
-  const estado = estadoDoAluno(req.aluno.id);
-  const { proximo, ...diagnostico } = estado.diagnostico;
-  res.json({
-    aluno: req.aluno,
-    limiar_dominio: LIMIAR_DOMINIO,
-    acertos_para_dominio: ACERTOS_PARA_DOMINIO,
-    diagnostico,
-    habilidades: resumoDominio(estado),
-  });
-});
-
-router.get('/alunos/:id/historico', exigeAluno, (req, res) => {
-  const limite = Number(req.query.limite) || 10;
-  res.json(historicoRecente(estadoDoAluno(req.aluno.id), limite));
-});
-
-router.get('/alunos/:id/proxima-questao', exigeAluno, (req, res) => {
-  const { habilidades, questoes, eventos, dominio, pL0, diagnostico } = estadoDoAluno(req.aluno.id);
-  const progresso = { respondidos: diagnostico.respondidos, total: diagnostico.total };
-
-  // Cold start: enquanto o teste rápido não termina, só saem itens-âncora.
-  if (!diagnostico.concluido) {
-    return res.json({
-      questao: questaoParaAluno(diagnostico.proximo),
-      diagnostico: progresso,
-      explicacao: {
-        regra: 'diagnostico',
-        habilidade_id: diagnostico.proximo.habilidade,
-        p_l: null,
-        dificuldade_alvo: diagnostico.proximo.dificuldade,
-        motivo:
-          `Teste rápido, item ${diagnostico.respondidos + 1} de ${diagnostico.total}: ` +
-          'as respostas definem o ponto de partida P(L0) de cada habilidade.',
-      },
+router.get(
+  '/alunos/:id/dominio',
+  exigeAluno,
+  rota(async (req, res) => {
+    const estado = await estadoDoAluno(req.aluno.id);
+    const { proximo, ...diagnostico } = estado.diagnostico;
+    res.json({
+      aluno: req.aluno,
+      limiar_dominio: LIMIAR_DOMINIO,
+      acertos_para_dominio: ACERTOS_PARA_DOMINIO,
+      diagnostico,
+      habilidades: resumoDominio(estado),
     });
-  }
+  }),
+);
 
-  const { questao, explicacao, mostrar_dica } = selecionarProximaQuestao({
-    dominio,
-    pL0,
-    habilidades,
-    questoes,
-    eventos,
-  });
-  res.json({
-    questao: questaoParaAluno(questao, { comDica: mostrar_dica }),
-    diagnostico: progresso,
-    explicacao,
-  });
-});
+router.get(
+  '/alunos/:id/historico',
+  exigeAluno,
+  rota(async (req, res) => {
+    const limite = Number(req.query.limite) || 10;
+    res.json(historicoRecente(await estadoDoAluno(req.aluno.id), limite));
+  }),
+);
 
-router.post('/alunos/:id/respostas', exigeAluno, (req, res) => {
-  const { questao_id, resposta_dada } = req.body ?? {};
-  if (!questao_id || resposta_dada === undefined) {
-    return res.status(400).json({ erro: 'Informe questao_id e resposta_dada' });
-  }
+router.get(
+  '/alunos/:id/proxima-questao',
+  exigeAluno,
+  rota(async (req, res) => {
+    const { habilidades, questoes, eventos, dominio, pL0, diagnostico } = await estadoDoAluno(
+      req.aluno.id,
+    );
+    const progresso = { respondidos: diagnostico.respondidos, total: diagnostico.total };
 
-  const questao = buscarQuestao(questao_id);
-  if (!questao) return res.status(404).json({ erro: 'Questão não encontrada' });
+    // Cold start: enquanto o teste rápido não termina, só saem itens-âncora.
+    if (!diagnostico.concluido) {
+      return res.json({
+        questao: questaoParaAluno(diagnostico.proximo),
+        diagnostico: progresso,
+        explicacao: {
+          regra: 'diagnostico',
+          habilidade_id: diagnostico.proximo.habilidade,
+          p_l: null,
+          dificuldade_alvo: diagnostico.proximo.dificuldade,
+          motivo:
+            `Teste rápido, item ${diagnostico.respondidos + 1} de ${diagnostico.total}: ` +
+            'as respostas definem o ponto de partida P(L0) de cada habilidade.',
+        },
+      });
+    }
 
-  const antes = estadoDoAluno(req.aluno.id);
-  const { diagnostico } = antes;
-  const tipo = diagnostico.concluido ? 'pratica' : 'diagnostico';
+    const { questao, explicacao, mostrar_dica } = selecionarProximaQuestao({
+      dominio,
+      pL0,
+      habilidades,
+      questoes,
+      eventos,
+    });
+    res.json({
+      questao: questaoParaAluno(questao, { comDica: mostrar_dica }),
+      diagnostico: progresso,
+      explicacao,
+    });
+  }),
+);
 
-  // O diagnóstico tem ordem fixa: aceitar outra questão bagunçaria o P(L0).
-  if (tipo === 'diagnostico' && questao.id !== diagnostico.proximo.id) {
-    return res
-      .status(409)
-      .json({ erro: 'Diagnóstico em andamento: responda a questão atual do teste rápido' });
-  }
+router.post(
+  '/alunos/:id/respostas',
+  exigeAluno,
+  rota(async (req, res) => {
+    const { questao_id, resposta_dada } = req.body ?? {};
+    if (!questao_id || resposta_dada === undefined) {
+      return res.status(400).json({ erro: 'Informe questao_id e resposta_dada' });
+    }
 
-  // Qual regra serviu esta questão. O motor é determinístico, então recalcular a
-  // recomendação com os eventos de antes da resposta dá a mesma que o GET deu.
-  let regra = 'diagnostico';
-  if (tipo === 'pratica') {
-    const recomendada = selecionarProximaQuestao(antes);
-    regra = recomendada.questao.id === questao.id ? recomendada.explicacao.regra : null;
-  }
+    const questao = buscarQuestao(questao_id);
+    if (!questao) return res.status(404).json({ erro: 'Questão não encontrada' });
 
-  const correto = String(resposta_dada).trim() === String(questao.resposta_correta).trim();
-  const eventoId = registrarEvento({
-    aluno_id: req.aluno.id,
-    questao_id: questao.id,
-    habilidade_id: questao.habilidade,
-    tipo,
-    resposta_dada: String(resposta_dada),
-    correto,
-    versao_parametros: VERSAO_PARAMETROS,
-    dificuldade_servida: questao.dificuldade,
-    regra,
-  });
+    const repo = await obterRepositorio();
+    const antes = await estadoDoAluno(req.aluno.id);
+    const { diagnostico } = antes;
+    const tipo = diagnostico.concluido ? 'pratica' : 'diagnostico';
 
-  const depois = estadoDoAluno(req.aluno.id);
-  const { proximo, ...diagnosticoDepois } = depois.diagnostico;
-  res.status(201).json({
-    tipo,
-    correto,
-    resposta_correta: questao.resposta_correta,
-    habilidade_id: questao.habilidade,
-    p_l_antes: depois.trajetoria[eventoId]?.p_l_antes ?? null,
-    p_l_depois: depois.trajetoria[eventoId]?.p_l_depois ?? null,
-    diagnostico: diagnosticoDepois,
-  });
-});
+    // O diagnóstico tem ordem fixa: aceitar outra questão bagunçaria o P(L0).
+    if (tipo === 'diagnostico' && questao.id !== diagnostico.proximo.id) {
+      return res
+        .status(409)
+        .json({ erro: 'Diagnóstico em andamento: responda a questão atual do teste rápido' });
+    }
+
+    // Qual regra serviu esta questão. O motor é determinístico, então recalcular a
+    // recomendação com os eventos de antes da resposta dá a mesma que o GET deu.
+    let regra = 'diagnostico';
+    if (tipo === 'pratica') {
+      const recomendada = selecionarProximaQuestao(antes);
+      regra = recomendada.questao.id === questao.id ? recomendada.explicacao.regra : null;
+    }
+
+    const correto = String(resposta_dada).trim() === String(questao.resposta_correta).trim();
+    const eventoId = await repo.registrarEvento({
+      aluno_id: req.aluno.id,
+      questao_id: questao.id,
+      habilidade_id: questao.habilidade,
+      tipo,
+      resposta_dada: String(resposta_dada),
+      correto,
+      versao_parametros: VERSAO_PARAMETROS,
+      dificuldade_servida: questao.dificuldade,
+      regra,
+    });
+
+    const depois = await estadoDoAluno(req.aluno.id);
+    const { proximo, ...diagnosticoDepois } = depois.diagnostico;
+    res.status(201).json({
+      tipo,
+      correto,
+      resposta_correta: questao.resposta_correta,
+      habilidade_id: questao.habilidade,
+      p_l_antes: depois.trajetoria[eventoId]?.p_l_antes ?? null,
+      p_l_depois: depois.trajetoria[eventoId]?.p_l_depois ?? null,
+      diagnostico: diagnosticoDepois,
+    });
+  }),
+);
 
 /**
  * Painel do professor: senha única no header (MVP — não é autenticação real).
  * Devolve tudo que a tela precisa em uma chamada só, para o polling ser barato.
  */
-router.get('/professor/painel', (req, res) => {
-  const senha = req.get('x-senha-professor');
-  if (senha !== SENHA_PROFESSOR) return res.status(401).json({ erro: 'Senha incorreta' });
+router.get(
+  '/professor/painel',
+  rota(async (req, res) => {
+    const senha = req.get('x-senha-professor');
+    if (senha !== SENHA_PROFESSOR) return res.status(401).json({ erro: 'Senha incorreta' });
 
-  const estados = listarAlunos().map((aluno) => ({ aluno, estado: estadoDoAluno(aluno.id) }));
-  const alunos = estados.map(({ aluno, estado }) => {
-    const { proximo, ...diagnostico } = estado.diagnostico;
-    return {
-      ...aluno,
-      diagnostico,
-      dominio: resumoDominio(estado),
-      historico: historicoRecente(estado, 10),
-    };
-  });
+    // Uma consulta para a turma inteira, não uma por aluno: o painel faz polling.
+    const repo = await obterRepositorio();
+    const [lista, eventosPorAluno] = await Promise.all([
+      repo.listarAlunos(),
+      repo.eventosPorAluno(),
+    ]);
+    const estados = lista.map((aluno) => ({
+      aluno,
+      estado: estadoDe(eventosPorAluno.get(aluno.id) ?? []),
+    }));
+    const alunos = estados.map(({ aluno, estado }) => {
+      const { proximo, ...diagnostico } = estado.diagnostico;
+      return {
+        ...aluno,
+        diagnostico,
+        dominio: resumoDominio(estado),
+        historico: historicoRecente(estado, 10),
+      };
+    });
 
-  // Por habilidade, somando a turma. Só entra quem praticou a habilidade, e o
-  // resumo diz quantos foram: a mediana sozinha esconderia quem não chegou lá.
-  const turma = listarHabilidades().map((h) => {
-    const daHabilidade = alunos
-      .map((a) => a.dominio.find((d) => d.habilidade_id === h.id))
-      .filter((d) => d.respostas_pratica > 0);
-    return {
-      habilidade_id: h.id,
-      ate_dominio: tempoAteDominioDaTurma(daHabilidade.map((d) => d.ate_dominio)),
-      retencao: retencaoDaTurma(daHabilidade.map((d) => d.retencao)),
-    };
-  });
+    // Por habilidade, somando a turma. Só entra quem praticou a habilidade, e o
+    // resumo diz quantos foram: a mediana sozinha esconderia quem não chegou lá.
+    const turma = listarHabilidades().map((h) => {
+      const daHabilidade = alunos
+        .map((a) => a.dominio.find((d) => d.habilidade_id === h.id))
+        .filter((d) => d.respostas_pratica > 0);
+      return {
+        habilidade_id: h.id,
+        ate_dominio: tempoAteDominioDaTurma(daHabilidade.map((d) => d.ate_dominio)),
+        retencao: retencaoDaTurma(daHabilidade.map((d) => d.retencao)),
+      };
+    });
 
-  res.json({
-    // Todos os cadastrados, com e sem dados suficientes: nunca esconder quem ficou de fora.
-    amostra: transparenciaAmostra(estados.map(({ estado }) => estado.eventos)),
-    turma,
-    limiar_dominio: LIMIAR_DOMINIO,
-    acertos_para_dominio: ACERTOS_PARA_DOMINIO,
-    janela_recente: JANELA_RECENTE,
-    divergencia: DIVERGENCIA,
-    erros_para_scaffolding: ERROS_PARA_SCAFFOLDING,
-    acertos_para_subir: ACERTOS_PARA_SUBIR,
-    intervalos_revisao: INTERVALOS_REVISAO,
-    limites_p_l0: LIMITES_P_L0,
-    parametros: PARAMETROS,
-    versao_parametros: VERSAO_PARAMETROS,
-    alunos,
-  });
-});
+    res.json({
+      // Todos os cadastrados, com e sem dados suficientes: nunca esconder quem ficou de fora.
+      amostra: transparenciaAmostra(estados.map(({ estado }) => estado.eventos)),
+      turma,
+      limiar_dominio: LIMIAR_DOMINIO,
+      acertos_para_dominio: ACERTOS_PARA_DOMINIO,
+      janela_recente: JANELA_RECENTE,
+      divergencia: DIVERGENCIA,
+      erros_para_scaffolding: ERROS_PARA_SCAFFOLDING,
+      acertos_para_subir: ACERTOS_PARA_SUBIR,
+      intervalos_revisao: INTERVALOS_REVISAO,
+      limites_p_l0: LIMITES_P_L0,
+      parametros: PARAMETROS,
+      versao_parametros: VERSAO_PARAMETROS,
+      alunos,
+    });
+  }),
+);
