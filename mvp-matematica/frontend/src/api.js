@@ -41,8 +41,23 @@ export const api = {
 
   dominio: (alunoId) => fetch(url(`/api/alunos/${alunoId}/dominio`)).then(json),
 
-  painelProfessor: (senha) =>
-    fetch(url('/api/professor/painel'), { headers: { 'x-senha-professor': senha } }).then(json),
+  /** `turmaId` null: todas as turmas. */
+  painelProfessor: (senha, turmaId = null) =>
+    fetch(url(`/api/professor/painel${turmaId ? `?turma=${turmaId}` : ''}`), {
+      headers: { 'x-senha-professor': senha },
+    }).then(json),
+
+  relatorio: (senha, turmaId) =>
+    fetch(url(`/api/professor/relatorio?turma=${turmaId}`), {
+      headers: { 'x-senha-professor': senha },
+    }).then(json),
+
+  /** Apaga todas as respostas e alunos criados; ficam os de exemplo, zerados. */
+  limparDados: (senha) =>
+    fetch(url('/api/professor/dados'), {
+      method: 'DELETE',
+      headers: { 'x-senha-professor': senha },
+    }).then(json),
 
   /** Cria (ou recria) a turma simulada da demonstração. */
   popularSimulacao: (senha) =>

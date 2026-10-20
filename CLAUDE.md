@@ -25,7 +25,8 @@ Existe uma **demo local aprovada** para mostrar a personalização funcionando. 
 - Acurácia do modelo (`backend/src/avaliacao.js` + `npm run avaliar-modelo`): AUC com intervalo, Brier contra referência, calibração, por habilidade e por regra. Roteiro do relatório do piloto em `docs/relatorio-piloto.md`.
 - Interface "Quadriculado" (nome provisório): página institucional, área da criança com material concreto no scaffolding, leitura em voz alta e ajustes de leitura, e painel com matriz aluno × habilidade e mapa de pré-requisitos. Decisões em `mvp-matematica/README.md`, seção "Interface".
 - Testes por regra e com alunos sintéticos (`npm test` em `backend/`).
-- Turma simulada no painel (`backend/src/simulacao.js`, botão "Popular turma simulada"): 24 alunos fictícios com semanas de uso, gerados pelo fluxo real (teste rápido → motor → BKT). Marcados como simulados, fora da tela da criança e do `avaliar-modelo`. Não é evidência de eficácia.
+- Turmas (3 fixas no seed, seletor no painel) e alunos simulados (`backend/src/simulacao.js`, botão "Popular turmas simuladas"): 24 alunos fictícios com semanas de uso, gerados pelo fluxo real (teste rápido → motor → BKT). Marcados como simulados, fora da tela da criança e do `avaliar-modelo`. Não é evidência de eficácia. Botão "Limpar informações" volta tudo ao seed.
+- Relatório de desempenho por turma (`backend/src/relatorio.js`, página `/professor/relatorio`): indicadores, comparativo entre turmas, por habilidade, grupos de trabalho e aluno por aluno, imprimível.
 
 Ela é **deliberadamente mais simples** que a arquitetura-alvo descrita no resto deste arquivo. Não "corrija" essas divergências sem combinar com o grupo:
 
@@ -33,7 +34,7 @@ Ela é **deliberadamente mais simples** que a arquitetura-alvo descrita no resto
 |---|---|
 | Next.js full-stack + PostgreSQL | Express (`backend/`) e React/Vite (`frontend/`), em JavaScript. Postgres (Neon) em produção, SQLite local quando não há `DATABASE_URL` |
 | Grafo de senso numérico (rascunho abaixo) | 11 habilidades do rascunho, sem correspondência um a um. Ainda sem validação dos conteudistas |
-| 7 entidades, com Sessão e Consentimento | Aluno, Habilidade, Questão e Evento. Sem sessão nem consentimento |
+| 7 entidades, com Sessão e Consentimento | Turma, Aluno, Habilidade, Questão e Evento. Sem sessão nem consentimento |
 | Autenticação + consentimento parental | Senha única no painel. Só alunos fictícios |
 | Repetição espaçada em tempo | Intervalos em respostas de prática (8 → 16 → 32), porque a demo acontece em minutos |
 | Tempo de resposta e dicas modulam S/G | Não são coletados (decisão em aberto) |

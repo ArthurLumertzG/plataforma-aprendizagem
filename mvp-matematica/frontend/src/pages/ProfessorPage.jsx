@@ -6,6 +6,7 @@ import Icone from '../components/Icone.jsx';
 import Logo from '../components/Logo.jsx';
 import MapaHabilidades from '../components/MapaHabilidades.jsx';
 import Regua from '../components/Regua.jsx';
+import { lerSenhaSalva, lerTurmaSalva, salvarSenha, salvarTurma } from '../lib/sessaoProfessor.js';
 import {
   NOME_DA_REGRA,
   corDoAluno,
@@ -16,25 +17,6 @@ import {
 } from '../lib/textos.js';
 
 const INTERVALO_POLLING_MS = 3000;
-const CHAVE_SENHA = 'senha-professor';
-
-function lerSenhaSalva() {
-  try {
-    return window.sessionStorage.getItem(CHAVE_SENHA) ?? '';
-  } catch {
-    return '';
-  }
-}
-
-function salvarSenha(senha) {
-  try {
-    if (senha) window.sessionStorage.setItem(CHAVE_SENHA, senha);
-    else window.sessionStorage.removeItem(CHAVE_SENHA);
-  } catch {
-    // Sem armazenamento: o login vale só até recarregar a página.
-  }
-}
-
 function Avatar({ aluno }) {
   return (
     <span className={`avatar avatar--${corDoAluno(aluno.id)}`} aria-hidden="true">
@@ -147,19 +129,28 @@ function SeloSimulado({ aluno }) {
 }
 
 /**
- * Popular o painel com uma turma fictícia em uso há semanas, para mostrar como ele
- * fica em produção. Os alunos passam pelo teste rápido, pelo motor e pelo BKT de
- * verdade; só as respostas são geradas (backend/src/simulacao.js).
+ * Controles da demonstração. Popular cria alunos fictícios em uso há semanas,
+ * distribuídos pelas turmas (backend/src/simulacao.js): eles passam pelo teste
+ * rápido, pelo motor e pelo BKT de verdade, só as respostas são geradas. Limpar
+ * volta tudo ao início e pede confirmação aqui mesmo (sem window.confirm).
  */
-function TurmaSimulada({ senha, simulados, aoMudar }) {
+function ControlesDemonstracao({ senha, simulados, aoMudar }) {
   const [ocupado, setOcupado] = useState(null);
+  const [confirmandoLimpeza, setConfirmandoLimpeza] = useState(false);
   const [erro, setErro] = useState(null);
+
+  const acoes = {
+    popular: () => api.popularSimulacao(senha),
+    remover: () => api.removerSimulacao(senha),
+    limpar: () => api.limparDados(senha),
+  };
 
   async function executar(acao) {
     setOcupado(acao);
     setErro(null);
     try {
-      await (acao === 'popular' ? api.popularSimulacao(senha) : api.removerSimulacao(senha));
+      await acoes[acao]();
+      setConfirmandoLimpeza(false);
       aoMudar();
     } catch (e) {
       setErro(e.message);
@@ -168,14 +159,49 @@ function TurmaSimulada({ senha, simulados, aoMudar }) {
     }
   }
 
+  if (confirmandoLimpeza) {
+    return (
+      <div className="simulacao simulacao--perigo" role="alertdialog" aria-labelledby="texto-limpar">
+        <p id="texto-limpar" className="simulacao__texto">
+          <strong>Apagar todas as informações?</strong> Somem todas as respostas e todos os
+          alunos cadastrados depois, inclusive os simulados. Ficam só os 5 alunos de exemplo,
+          zerados. Não dá para desfazer.
+        </p>
+        <div className="simulacao__acoes">
+          <button
+            type="button"
+            className="botao botao--perigo"
+            onClick={() => executar('limpar')}
+            disabled={ocupado !== null}
+          >
+            {ocupado === 'limpar' ? 'Apagando…' : 'Sim, apagar tudo'}
+          </button>
+          <button
+            type="button"
+            className="botao botao--leve"
+            onClick={() => setConfirmandoLimpeza(false)}
+            disabled={ocupado !== null}
+          >
+            Cancelar
+          </button>
+        </div>
+        {erro && (
+          <p className="mensagem-erro" role="alert">
+            {erro}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="simulacao">
       <p className="simulacao__texto">
         {simulados === 0 ? (
           <>
-            <strong>Demonstração:</strong> veja o painel como numa turma em uso real, com 24
-            alunos fictícios e algumas semanas de prática. Cada resposta passa pelo teste rápido,
-            pelo motor e pelo BKT como as de uma criança de verdade.
+            <strong>Demonstração:</strong> veja o painel como numa escola em uso real, com 24
+            alunos fictícios em 3 turmas e algumas semanas de prática. Cada resposta passa pelo
+            teste rápido, pelo motor e pelo BKT como as de uma criança de verdade.
           </>
         ) : (
           <>
@@ -193,9 +219,9 @@ function TurmaSimulada({ senha, simulados, aoMudar }) {
           disabled={ocupado !== null}
         >
           {ocupado === 'popular'
-            ? 'Gerando a turma…'
+            ? 'Gerando os alunos…'
             : simulados === 0
-              ? 'Popular turma simulada'
+              ? 'Popular turmas simuladas'
               : 'Gerar de novo'}
         </button>
         {simulados > 0 && (
@@ -208,6 +234,14 @@ function TurmaSimulada({ senha, simulados, aoMudar }) {
             {ocupado === 'remover' ? 'Removendo…' : 'Remover simulados'}
           </button>
         )}
+        <button
+          type="button"
+          className="botao botao--leve botao--texto-perigo"
+          onClick={() => setConfirmandoLimpeza(true)}
+          disabled={ocupado !== null}
+        >
+          Limpar informações
+        </button>
       </div>
       {erro && (
         <p className="mensagem-erro" role="alert">
@@ -343,7 +377,7 @@ function Atencao({ alunos, aoVer }) {
   );
 }
 
-function Matriz({ alunos, turma, limiar, acertosParaDominio, selecionado, aoSelecionar }) {
+function Matriz({ alunos, nomeDaTurma, turma, limiar, acertosParaDominio, selecionado, aoSelecionar }) {
   const habilidades = alunos[0]?.dominio ?? [];
 
   return (
@@ -414,6 +448,9 @@ function Matriz({ alunos, turma, limiar, acertosParaDominio, selecionado, aoSele
                       <span className="matriz__nome">
                         {a.nome} <SeloSimulado aluno={a} />
                       </span>
+                      {nomeDaTurma && (
+                        <span className="matriz__situacao">{nomeDaTurma[a.turma_id]}</span>
+                      )}
                       {!a.diagnostico.concluido && (
                         <span className="matriz__situacao">
                           Teste rápido {a.diagnostico.respondidos} de {a.diagnostico.total}
@@ -641,8 +678,9 @@ export default function ProfessorPage() {
   const [atualizadoEm, setAtualizadoEm] = useState(null);
   const [selecionado, setSelecionado] = useState(null);
   const [recomendacao, setRecomendacao] = useState(null);
-  // Sobe depois de popular ou remover a turma simulada: recarrega sem esperar o polling.
+  // Sobe depois de popular, remover ou limpar: recarrega sem esperar o polling.
   const [versaoDados, setVersaoDados] = useState(0);
+  const [turmaId, setTurmaId] = useState(lerTurmaSalva);
 
   const autenticado = Boolean(painel);
 
@@ -652,7 +690,7 @@ export default function ProfessorPage() {
     let ativo = true;
     const carregar = () =>
       api
-        .painelProfessor(senha)
+        .painelProfessor(senha, turmaId)
         .then((dados) => {
           if (!ativo) return;
           setPainel(dados);
@@ -662,6 +700,8 @@ export default function ProfessorPage() {
         .catch((e) => {
           if (!ativo) return;
           setErro(e.message);
+          // A turma salva sumiu do seed: volta para todas.
+          if (e.message === 'Turma não encontrada') escolherTurma(null);
           if (e.message === 'Senha incorreta') {
             setSenha('');
             setPainel(null);
@@ -674,7 +714,7 @@ export default function ProfessorPage() {
       ativo = false;
       clearInterval(timer);
     };
-  }, [senha, versaoDados]);
+  }, [senha, versaoDados, turmaId]);
 
   // Seleciona o primeiro aluno quando o painel chega.
   useEffect(() => {
@@ -698,6 +738,11 @@ export default function ProfessorPage() {
     };
   }, [selecionado, atualizadoEm]);
 
+  function escolherTurma(id) {
+    salvarTurma(id);
+    setTurmaId(id);
+  }
+
   function entrar(novaSenha) {
     setErro(null);
     salvarSenha(novaSenha);
@@ -718,6 +763,8 @@ export default function ProfessorPage() {
   const precisamAtencao = painel.alunos.filter((a) => alertasDa(a).length > 0).length;
   const { amostra } = painel;
   const emTeste = painel.alunos.filter((a) => !a.diagnostico.concluido).length;
+  const nomeDaTurma = Object.fromEntries(painel.turmas.map((t) => [t.id, t.nome]));
+  const turmaDoRelatorio = painel.turma_selecionada?.id ?? painel.turmas[0]?.id;
 
   return (
     <div className="area-adulto painel">
@@ -739,7 +786,33 @@ export default function ProfessorPage() {
       <main className="painel__corpo">
         <div className="painel__principal">
           <div className="painel__resumo">
-            <h1>Turma de demonstração</h1>
+            <div className="painel__turma">
+              <label className="painel__seletor">
+                <span className="rotulo">Turma</span>
+                <select
+                  className="campo"
+                  value={turmaId ?? ''}
+                  onChange={(e) => escolherTurma(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">
+                    Todas as turmas ({painel.turmas.reduce((soma, t) => soma + t.alunos, 0)} alunos)
+                  </option>
+                  {painel.turmas.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.nome} ({plural(t.alunos, 'aluno', 'alunos')})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Link
+                className="botao botao--leve"
+                to={`/professor/relatorio?turma=${turmaDoRelatorio}`}
+              >
+                <Icone nome="relatorio" />
+                Relatório {painel.turma_selecionada ? 'da turma' : 'por turma'}
+              </Link>
+            </div>
+            <h1>{painel.turma_selecionada?.nome ?? 'Todas as turmas'}</h1>
             <p>
               {painel.alunos.length} alunos.{' '}
               {precisamAtencao === 0 && 'Nenhum precisa de atenção agora'}
@@ -755,7 +828,7 @@ export default function ProfessorPage() {
               alunos cadastrados têm dados suficientes para análise (mínimo: {amostra.minimo}{' '}
               respostas de prática, sem contar o teste rápido).
             </p>
-            <TurmaSimulada
+            <ControlesDemonstracao
               senha={senha}
               simulados={painel.simulados ?? 0}
               aoMudar={() => setVersaoDados((v) => v + 1)}
@@ -764,6 +837,7 @@ export default function ProfessorPage() {
           <Atencao alunos={painel.alunos} aoVer={setSelecionado} />
           <Matriz
             alunos={painel.alunos}
+            nomeDaTurma={painel.turma_selecionada ? null : nomeDaTurma}
             turma={painel.turma}
             limiar={painel.limiar_dominio}
             acertosParaDominio={painel.acertos_para_dominio}

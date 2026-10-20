@@ -4,12 +4,14 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AlunoPage from './pages/AlunoPage.jsx';
 import InicioPage from './pages/InicioPage.jsx';
 import ProfessorPage from './pages/ProfessorPage.jsx';
+import RelatorioPage from './pages/RelatorioPage.jsx';
 import { MARCA } from './lib/textos.js';
 
 const TITULOS = {
   '/': `${MARCA}: matemática no passo de cada criança`,
   '/aluno': `Praticar | ${MARCA}`,
   '/professor': `Painel do professor | ${MARCA}`,
+  '/professor/relatorio': `Relatório da turma | ${MARCA}`,
 };
 
 export default function App() {
@@ -24,6 +26,7 @@ export default function App() {
       <Route path="/" element={<InicioPage />} />
       <Route path="/aluno" element={<AlunoPage />} />
       <Route path="/professor" element={<ProfessorPage />} />
+      <Route path="/professor/relatorio" element={<RelatorioPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

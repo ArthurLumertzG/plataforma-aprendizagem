@@ -48,32 +48,35 @@ const PERFIS = {
   },
 };
 
-/** Pseudônimos fictícios, um perfil cada. A ordem é a do painel. */
-const TURMA = [
-  ['Alice', 'adiantado'],
-  ['Bento', 'tipico'],
-  ['Caio', 'dificuldade'],
-  ['Duda', 'tipico'],
-  ['Enzo', 'trava'],
-  ['Fernanda', 'adiantado'],
-  ['Gael', 'desatento'],
-  ['Helena', 'tipico'],
-  ['Igor', 'dificuldade'],
-  ['Júlia', 'tipico'],
-  ['Kauã', 'novato'],
-  ['Laura', 'trava'],
-  ['Miguel', 'tipico'],
-  ['Nina', 'adiantado'],
-  ['Otávio', 'dificuldade'],
-  ['Pietra', 'tipico'],
-  ['Rafael', 'desatento'],
-  ['Sofia', 'tipico'],
-  ['Théo', 'trava'],
-  ['Valentina', 'tipico'],
-  ['Yasmin', 'chegando'],
-  ['Lucas', 'dificuldade'],
-  ['Mariana', 'adiantado'],
-  ['Heitor', 'tipico'],
+/**
+ * Pseudônimos fictícios: [nome, perfil, turma_id] (turmas do seed-data.js). O 1º ano
+ * concentra quem tem dificuldade e quem acabou de chegar; o 3º, os adiantados.
+ */
+const ALUNOS_SIMULADOS = [
+  ['Alice', 'adiantado', 3],
+  ['Bento', 'tipico', 1],
+  ['Caio', 'dificuldade', 1],
+  ['Duda', 'tipico', 1],
+  ['Enzo', 'trava', 2],
+  ['Fernanda', 'adiantado', 3],
+  ['Gael', 'desatento', 2],
+  ['Helena', 'tipico', 1],
+  ['Igor', 'dificuldade', 1],
+  ['Júlia', 'tipico', 2],
+  ['Kauã', 'novato', 1],
+  ['Laura', 'trava', 2],
+  ['Miguel', 'tipico', 2],
+  ['Nina', 'adiantado', 3],
+  ['Otávio', 'dificuldade', 1],
+  ['Pietra', 'tipico', 2],
+  ['Rafael', 'desatento', 2],
+  ['Sofia', 'tipico', 3],
+  ['Théo', 'trava', 3],
+  ['Valentina', 'tipico', 3],
+  ['Yasmin', 'chegando', 1],
+  ['Lucas', 'dificuldade', 2],
+  ['Mariana', 'adiantado', 3],
+  ['Heitor', 'tipico', 3],
 ];
 
 /** Onde os perfis "trava" emperram (uma por aluno, em rodízio). */
@@ -243,16 +246,16 @@ function datarRespostas(sorteio, eventos, dias) {
 
 /**
  * @param {{habilidades: Array, questoes: Array, agora?: Date, semente?: number}} ctx
- * @returns {Array<{nome: string, perfil: string, eventos: Array}>} Eventos em ordem
+ * @returns {Array<{nome: string, perfil: string, turma_id: number, eventos: Array}>} Eventos em ordem
  *          cronológica, com `criado_em`; o id definitivo vem do banco.
  */
 export function simularTurma({ habilidades, questoes, agora = new Date(), semente = SEMENTE_PADRAO }) {
   const sorteio = criarSorteio(semente);
   const dias = diasUteis(agora);
   let travas = 0;
-  return TURMA.map(([nome, perfil]) => {
+  return ALUNOS_SIMULADOS.map(([nome, perfil, turma_id]) => {
     const crianca = criarCrianca(sorteio, perfil, habilidades, perfil === 'trava' ? travas++ : 0);
     const eventos = simularRespostas(sorteio, crianca, habilidades, questoes);
-    return { nome, perfil, eventos: datarRespostas(sorteio, eventos, dias) };
+    return { nome, perfil, turma_id, eventos: datarRespostas(sorteio, eventos, dias) };
   });
 }

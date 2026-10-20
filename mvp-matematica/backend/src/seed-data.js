@@ -69,12 +69,19 @@ export const HABILIDADES = [
   },
 ];
 
+// Turmas fixas da demonstração. Aluno novo (tela da criança) entra na primeira.
+export const TURMAS = [
+  { id: 1, nome: '1º ano A' },
+  { id: 2, nome: '2º ano A' },
+  { id: 3, nome: '3º ano A' },
+];
+
 export const ALUNOS = [
-  { id: 1, nome: 'Ana' },
-  { id: 2, nome: 'Bruno' },
-  { id: 3, nome: 'Clara' },
-  { id: 4, nome: 'Davi' },
-  { id: 5, nome: 'Elisa' },
+  { id: 1, nome: 'Ana', turma_id: 1 },
+  { id: 2, nome: 'Bruno', turma_id: 1 },
+  { id: 3, nome: 'Clara', turma_id: 1 },
+  { id: 4, nome: 'Davi', turma_id: 1 },
+  { id: 5, nome: 'Elisa', turma_id: 1 },
 ];
 
 export const QUESTOES = [

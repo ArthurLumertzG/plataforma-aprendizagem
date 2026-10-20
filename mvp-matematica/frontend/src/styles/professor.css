@@ -246,6 +246,51 @@
   vertical-align: middle;
 }
 
+/* Ação destrutiva: âmbar escuro, como os alertas; o painel não usa vermelho. */
+.simulacao--perigo {
+  border-color: var(--atencao-vivo);
+  border-style: solid;
+  background: var(--atencao-fundo);
+}
+
+.botao--perigo {
+  background: var(--atencao);
+  color: #fff;
+}
+
+.botao--perigo:hover:not(:disabled) {
+  background: #743d08;
+}
+
+.botao--texto-perigo {
+  color: var(--atencao);
+}
+
+/* Seletor de turma e atalho para o relatório, acima do título. */
+.painel__turma {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.painel__seletor {
+  flex: 0 1 280px;
+  min-width: 0;
+}
+
+.painel__seletor .rotulo {
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+}
+
+.painel__seletor .campo {
+  min-height: 44px;
+  padding-block: 0.4em;
+}
+
 /* ---------- precisa de atenção ---------- */
 .atencao h2,
 .matriz h2 {

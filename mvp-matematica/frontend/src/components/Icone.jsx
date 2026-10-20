@@ -49,6 +49,19 @@ const CAMINHOS = {
     </>
   ),
   sair: <path d="M14 5h4v14h-4M10 8l-4 4 4 4M6 12h9" />,
+  relatorio: (
+    <>
+      <path d="M7 3h7l4 4v14H7z" />
+      <path d="M14 3v4h4M10 17v-3M13 17v-6M16 17v-2" />
+    </>
+  ),
+  imprimir: (
+    <>
+      <path d="M7 9V4h10v5M7 17H5v-6h14v6h-2" />
+      <rect x="7" y="14" width="10" height="6" />
+    </>
+  ),
+  voltar: <path d="M15 6l-6 6 6 6" />,
   cadeado: (
     <>
       <rect x="5" y="11" width="14" height="9" rx="2" />

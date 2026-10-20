@@ -31,7 +31,14 @@ import {
   estadoDiagnostico,
   selecionarProximaQuestao,
 } from './motor.js';
-import { buscarQuestao, listarHabilidades, listarQuestoes } from './conteudo.js';
+import {
+  buscarQuestao,
+  buscarTurma,
+  listarHabilidades,
+  listarQuestoes,
+  listarTurmas,
+} from './conteudo.js';
+import { comparativoDeTurmas, relatorioDaTurma } from './relatorio.js';
 import { obterRepositorio } from './repositorio.js';
 import { simularTurma } from './simulacao.js';
 
@@ -164,12 +171,19 @@ router.post(
         .status(400)
         .json({ erro: `Informe um apelido de 1 a ${TAMANHO_MAX_NOME} caracteres` });
     }
-    res.status(201).json(await (await obterRepositorio()).criarAluno(nome));
+    // Sem turma escolhida, a primeira (a tela da criança ainda não pergunta).
+    const turmaId = req.body?.turma_id ?? listarTurmas()[0].id;
+    if (!buscarTurma(turmaId)) return res.status(400).json({ erro: 'Turma não encontrada' });
+    res.status(201).json(await (await obterRepositorio()).criarAluno(nome, turmaId));
   }),
 );
 
 router.get('/habilidades', (_req, res) => {
   res.json(listarHabilidades());
+});
+
+router.get('/turmas', (_req, res) => {
+  res.json(listarTurmas());
 });
 
 router.get(
@@ -305,28 +319,54 @@ function exigeProfessor(req, res, next) {
   next();
 }
 
+/**
+ * Todos os alunos com o estado derivado dos eventos, numa consulta para a escola
+ * inteira (não uma por aluno): o painel faz polling.
+ */
+async function carregarAlunos() {
+  const repo = await obterRepositorio();
+  const [lista, eventosPorAluno, simulados] = await Promise.all([
+    repo.listarAlunos(),
+    repo.eventosPorAluno(),
+    repo.alunosSimulados(),
+  ]);
+  const ehSimulado = new Set(simulados);
+  return lista.map((aluno) => ({
+    aluno: { ...aluno, simulado: ehSimulado.has(aluno.id) },
+    estado: estadoDe(eventosPorAluno.get(aluno.id) ?? []),
+  }));
+}
+
+/** `?turma=<id>` escolhe uma turma; sem ele, todas. null se a turma não existe. */
+function turmaDaConsulta(req) {
+  if (req.query.turma === undefined || req.query.turma === '') return { todas: true };
+  return buscarTurma(Number(req.query.turma)) ?? null;
+}
+
+/** As turmas com quantos alunos cada uma tem (para o seletor). */
+function turmasComContagem(carregados) {
+  return listarTurmas().map((t) => ({
+    ...t,
+    alunos: carregados.filter(({ aluno }) => aluno.turma_id === t.id).length,
+  }));
+}
+
 /** Devolve tudo que a tela precisa em uma chamada só, para o polling ser barato. */
 router.get(
   '/professor/painel',
   exigeProfessor,
-  rota(async (_req, res) => {
-    // Uma consulta para a turma inteira, não uma por aluno: o painel faz polling.
-    const repo = await obterRepositorio();
-    const [lista, eventosPorAluno, simulados] = await Promise.all([
-      repo.listarAlunos(),
-      repo.eventosPorAluno(),
-      repo.alunosSimulados(),
-    ]);
-    const ehSimulado = new Set(simulados);
-    const estados = lista.map((aluno) => ({
-      aluno,
-      estado: estadoDe(eventosPorAluno.get(aluno.id) ?? []),
-    }));
+  rota(async (req, res) => {
+    const selecionada = turmaDaConsulta(req);
+    if (!selecionada) return res.status(404).json({ erro: 'Turma não encontrada' });
+    const carregados = await carregarAlunos();
+    const estados = selecionada.todas
+      ? carregados
+      : carregados.filter(({ aluno }) => aluno.turma_id === selecionada.id);
+
     const alunos = estados.map(({ aluno, estado }) => {
       const { proximo, ...diagnostico } = estado.diagnostico;
       return {
         ...aluno,
-        simulado: ehSimulado.has(aluno.id),
         diagnostico,
         dominio: resumoDominio(estado),
         historico: historicoRecente(estado, 10),
@@ -349,7 +389,10 @@ router.get(
     res.json({
       // Todos os cadastrados, com e sem dados suficientes: nunca esconder quem ficou de fora.
       amostra: transparenciaAmostra(estados.map(({ estado }) => estado.eventos)),
-      simulados: simulados.length,
+      // Contados na escola toda: o controle da simulação não depende da turma em vista.
+      simulados: carregados.filter(({ aluno }) => aluno.simulado).length,
+      turma_selecionada: selecionada.todas ? null : selecionada,
+      turmas: turmasComContagem(carregados),
       turma,
       limiar_dominio: LIMIAR_DOMINIO,
       acertos_para_dominio: ACERTOS_PARA_DOMINIO,
@@ -367,19 +410,61 @@ router.get(
 );
 
 /**
- * Turma simulada (simulacao.js): alunos fictícios com semanas de uso, para mostrar
- * o painel como seria em produção. Popular de novo substitui a turma anterior;
- * alunos de verdade e os de exemplo não são tocados.
+ * Relatório de desempenho: o de uma turma (`?turma=<id>`, padrão a primeira) e o
+ * comparativo entre todas, calculados dos mesmos eventos do painel.
+ */
+router.get(
+  '/professor/relatorio',
+  exigeProfessor,
+  rota(async (req, res) => {
+    const pedida = turmaDaConsulta(req);
+    if (!pedida) return res.status(404).json({ erro: 'Turma não encontrada' });
+    const selecionada = pedida.todas ? listarTurmas()[0] : pedida;
+
+    const habilidades = listarHabilidades();
+    const carregados = await carregarAlunos();
+    const relatorios = listarTurmas().map((turma) =>
+      relatorioDaTurma({
+        turma,
+        habilidades,
+        entradas: carregados
+          .filter(({ aluno }) => aluno.turma_id === turma.id)
+          .map(({ aluno, estado }) => ({
+            aluno,
+            eventos: estado.eventos,
+            diagnostico: estado.diagnostico,
+            dominio: resumoDominio(estado),
+          })),
+      }),
+    );
+
+    res.json({
+      gerado_em: new Date().toISOString(),
+      limiar_dominio: LIMIAR_DOMINIO,
+      acertos_para_dominio: ACERTOS_PARA_DOMINIO,
+      versao_parametros: VERSAO_PARAMETROS,
+      simulados: carregados.filter(({ aluno }) => aluno.simulado).length,
+      turmas: turmasComContagem(carregados),
+      comparativo: comparativoDeTurmas(relatorios),
+      relatorio: relatorios.find((r) => r.turma.id === selecionada.id),
+    });
+  }),
+);
+
+/**
+ * Alunos simulados (simulacao.js): fictícios, com semanas de uso, distribuídos
+ * pelas turmas, para mostrar o painel como seria em produção. Popular de novo
+ * substitui os anteriores; alunos de verdade e os de exemplo não são tocados.
  */
 router.post(
   '/professor/simulacao',
   exigeProfessor,
   rota(async (_req, res) => {
-    const turma = simularTurma({ habilidades: listarHabilidades(), questoes: listarQuestoes() });
-    await (await obterRepositorio()).substituirSimulados(turma);
+    const alunos = simularTurma({ habilidades: listarHabilidades(), questoes: listarQuestoes() });
+    await (await obterRepositorio()).substituirSimulados(alunos);
     res.status(201).json({
-      alunos: turma.length,
-      respostas: turma.reduce((soma, a) => soma + a.eventos.length, 0),
+      alunos: alunos.length,
+      respostas: alunos.reduce((soma, a) => soma + a.eventos.length, 0),
     });
   }),
 );
@@ -390,5 +475,19 @@ router.delete(
   rota(async (_req, res) => {
     await (await obterRepositorio()).removerSimulados();
     res.json({ alunos: 0 });
+  }),
+);
+
+/**
+ * "Limpar informações": volta ao estado inicial da demonstração. Apaga todas as
+ * respostas e todos os alunos criados depois, inclusive os simulados; ficam os
+ * alunos de exemplo, zerados. Não tem desfazer.
+ */
+router.delete(
+  '/professor/dados',
+  exigeProfessor,
+  rota(async (_req, res) => {
+    await (await obterRepositorio()).limparTudo();
+    res.json({ ok: true });
   }),
 );

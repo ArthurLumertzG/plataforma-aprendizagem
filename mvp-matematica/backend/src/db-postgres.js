@@ -3,25 +3,32 @@
 // executa é um "executor", que em produção é o driver HTTP da Neon e nos testes é
 // o PGlite (Postgres rodando dentro do Node).
 
-import { ALUNOS, HABILIDADES, QUESTOES } from './seed-data.js';
+import { ALUNOS, HABILIDADES, QUESTOES, TURMAS } from './seed-data.js';
 import { VERSAO_CONTEUDO } from './conteudo.js';
 
 /**
  * Sobe quando o esquema mudar; a migração entra em ESQUEMA, sempre idempotente.
  * 2: alunos.simulado (turma simulada da demonstração).
+ * 3: tabela turmas e alunos.turma_id.
  */
-const VERSAO_ESQUEMA = '2';
+const VERSAO_ESQUEMA = '3';
 
 const ESQUEMA = [
   `CREATE TABLE IF NOT EXISTS meta (
      chave TEXT PRIMARY KEY,
      valor TEXT NOT NULL
    )`,
+  `CREATE TABLE IF NOT EXISTS turmas (
+     id    INTEGER PRIMARY KEY,
+     nome  TEXT NOT NULL,
+     ordem INTEGER NOT NULL
+   )`,
   `CREATE TABLE IF NOT EXISTS alunos (
      id   SERIAL PRIMARY KEY,
      nome TEXT NOT NULL  -- pseudônimo/apelido, nunca o nome completo
    )`,
   'ALTER TABLE alunos ADD COLUMN IF NOT EXISTS simulado BOOLEAN NOT NULL DEFAULT false',
+  'ALTER TABLE alunos ADD COLUMN IF NOT EXISTS turma_id INTEGER REFERENCES turmas(id)',
   `CREATE TABLE IF NOT EXISTS habilidades (
      id             TEXT PRIMARY KEY,
      nome           TEXT NOT NULL,
@@ -60,12 +67,21 @@ const ESQUEMA = [
 /** Upserts do conteúdo e dos alunos de exemplo, numa transação só. */
 function sincronizacaoDoConteudo() {
   const comandos = [];
+  TURMAS.forEach((t, ordem) =>
+    comandos.push([
+      `INSERT INTO turmas (id, nome, ordem) VALUES ($1, $2, $3)
+       ON CONFLICT (id) DO UPDATE SET nome = excluded.nome, ordem = excluded.ordem`,
+      [t.id, t.nome, ordem],
+    ]),
+  );
   for (const a of ALUNOS) {
     comandos.push([
-      'INSERT INTO alunos (id, nome) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING',
-      [a.id, a.nome],
+      'INSERT INTO alunos (id, nome, turma_id) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING',
+      [a.id, a.nome, a.turma_id],
     ]);
   }
+  // Alunos de antes das turmas vão para a primeira.
+  comandos.push(['UPDATE alunos SET turma_id = $1 WHERE turma_id IS NULL', [TURMAS[0].id]]);
   // Os alunos de exemplo têm id fixo: a sequência precisa continuar depois deles.
   comandos.push([
     `SELECT setval(pg_get_serial_sequence('alunos', 'id'),
@@ -186,18 +202,21 @@ export async function criarRepositorioPostgres(executor) {
     banco: 'postgres',
 
     async listarAlunos() {
-      return executor.consultar('SELECT id, nome FROM alunos ORDER BY id');
+      return executor.consultar('SELECT id, nome, turma_id FROM alunos ORDER BY id');
     },
 
     async buscarAluno(id) {
-      const [aluno] = await executor.consultar('SELECT id, nome FROM alunos WHERE id = $1', [id]);
+      const [aluno] = await executor.consultar(
+        'SELECT id, nome, turma_id FROM alunos WHERE id = $1',
+        [id],
+      );
       return aluno;
     },
 
-    async criarAluno(nome) {
+    async criarAluno(nome, turmaId = TURMAS[0].id) {
       const [aluno] = await executor.consultar(
-        'INSERT INTO alunos (nome) VALUES ($1) RETURNING id, nome',
-        [nome],
+        'INSERT INTO alunos (nome, turma_id) VALUES ($1, $2) RETURNING id, nome, turma_id',
+        [nome, turmaId],
       );
       return aluno;
     },
@@ -224,16 +243,18 @@ export async function criarRepositorioPostgres(executor) {
      * Troca a turma simulada inteira. Os alunos entram antes (o id vem do banco) e
      * os eventos numa transação só; se algo falhar no meio, popular de novo resolve.
      */
-    async substituirSimulados(turma) {
+    async substituirSimulados(alunos) {
       await executor.lote(REMOVER_SIMULADOS);
-      if (turma.length === 0) return;
+      if (alunos.length === 0) return;
       const criados = await executor.consultar(
-        'INSERT INTO alunos (nome, simulado) SELECT unnest($1::text[]), true RETURNING id, nome',
-        [turma.map((a) => a.nome)],
+        `INSERT INTO alunos (nome, turma_id, simulado)
+         SELECT nome, turma_id, true FROM unnest($1::text[], $2::int[]) AS t(nome, turma_id)
+         RETURNING id, nome`,
+        [alunos.map((a) => a.nome), alunos.map((a) => a.turma_id)],
       );
       // RETURNING não garante a ordem: liga pelo nome, que é único na turma simulada.
       const idDe = new Map(criados.map((c) => [c.nome, c.id]));
-      const eventos = turma.flatMap((aluno) =>
+      const eventos = alunos.flatMap((aluno) =>
         aluno.eventos.map((e) => ({ ...e, aluno_id: idDe.get(aluno.nome) })),
       );
       const comandos = [];
@@ -245,6 +266,23 @@ export async function criarRepositorioPostgres(executor) {
 
     async removerSimulados() {
       await executor.lote(REMOVER_SIMULADOS);
+    },
+
+    /**
+     * "Limpar informações": volta ao estado inicial. Apaga todas as respostas e todos
+     * os alunos criados depois (inclusive os simulados); ficam os de exemplo, zerados.
+     */
+    async limparTudo() {
+      await executor.lote([
+        ['DELETE FROM eventos', []],
+        ['DELETE FROM alunos WHERE NOT (id = ANY($1::int[]))', [ALUNOS.map((a) => a.id)]],
+        [
+          `SELECT setval(pg_get_serial_sequence('alunos', 'id'),
+                         GREATEST((SELECT MAX(id) FROM alunos), 1))`,
+          [],
+        ],
+        ["SELECT setval(pg_get_serial_sequence('eventos', 'id'), 1, false)", []],
+      ]);
     },
 
     async registrarEvento(e) {

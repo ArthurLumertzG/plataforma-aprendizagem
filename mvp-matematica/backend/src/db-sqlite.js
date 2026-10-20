@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 
-import { ALUNOS, HABILIDADES, QUESTOES } from './seed-data.js';
+import { ALUNOS, HABILIDADES, QUESTOES, TURMAS } from './seed-data.js';
 
 const aquiDir = path.dirname(fileURLToPath(import.meta.url));
 export const CAMINHO_PADRAO = path.join(aquiDir, '..', 'data', 'mvp.db');
@@ -36,10 +36,17 @@ function migrar(db) {
   }
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS turmas (
+      id    INTEGER PRIMARY KEY,
+      nome  TEXT NOT NULL,
+      ordem INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS alunos (
       id    INTEGER PRIMARY KEY AUTOINCREMENT,
       nome  TEXT NOT NULL,  -- pseudônimo/apelido, nunca o nome completo
-      simulado INTEGER NOT NULL DEFAULT 0  -- turma simulada da demonstração (simulacao.js)
+      simulado INTEGER NOT NULL DEFAULT 0,  -- turma simulada da demonstração (simulacao.js)
+      turma_id INTEGER REFERENCES turmas(id)
     );
 
     CREATE TABLE IF NOT EXISTS habilidades (
@@ -84,11 +91,20 @@ function migrar(db) {
   if (!colunas.includes('simulado')) {
     db.exec('ALTER TABLE alunos ADD COLUMN simulado INTEGER NOT NULL DEFAULT 0');
   }
+  if (!colunas.includes('turma_id')) {
+    db.exec('ALTER TABLE alunos ADD COLUMN turma_id INTEGER REFERENCES turmas(id)');
+  }
 }
 
 /** Conteúdo vem do seed: edições em seed-data.js valem no próximo start. */
 function semear(db) {
-  const inserirAluno = db.prepare('INSERT OR IGNORE INTO alunos (id, nome) VALUES (?, ?)');
+  const upsertTurma = db.prepare(
+    `INSERT INTO turmas (id, nome, ordem) VALUES (?, ?, ?)
+     ON CONFLICT (id) DO UPDATE SET nome = excluded.nome, ordem = excluded.ordem`,
+  );
+  const inserirAluno = db.prepare(
+    'INSERT OR IGNORE INTO alunos (id, nome, turma_id) VALUES (?, ?, ?)',
+  );
   const upsertHabilidade = db.prepare(
     `INSERT INTO habilidades (id, nome, pre_requisitos, bkt, ordem)
      VALUES (@id, @nome, @pre_requisitos, @bkt, @ordem)
@@ -107,7 +123,10 @@ function semear(db) {
   );
 
   db.transaction(() => {
-    for (const a of ALUNOS) inserirAluno.run(a.id, a.nome);
+    TURMAS.forEach((t, i) => upsertTurma.run(t.id, t.nome, i));
+    for (const a of ALUNOS) inserirAluno.run(a.id, a.nome, a.turma_id);
+    // Alunos de antes das turmas vão para a primeira.
+    db.prepare('UPDATE alunos SET turma_id = ? WHERE turma_id IS NULL').run(TURMAS[0].id);
     HABILIDADES.forEach((h, i) =>
       upsertHabilidade.run({
         id: h.id,
@@ -158,16 +177,18 @@ export async function criarRepositorioSqlite(caminho = CAMINHO_PADRAO) {
     banco: 'sqlite',
 
     async listarAlunos() {
-      return db.prepare('SELECT id, nome FROM alunos ORDER BY id').all();
+      return db.prepare('SELECT id, nome, turma_id FROM alunos ORDER BY id').all();
     },
 
     async buscarAluno(id) {
-      return db.prepare('SELECT id, nome FROM alunos WHERE id = ?').get(id);
+      return db.prepare('SELECT id, nome, turma_id FROM alunos WHERE id = ?').get(id);
     },
 
-    async criarAluno(nome) {
-      const { lastInsertRowid } = db.prepare('INSERT INTO alunos (nome) VALUES (?)').run(nome);
-      return { id: Number(lastInsertRowid), nome };
+    async criarAluno(nome, turmaId = TURMAS[0].id) {
+      const { lastInsertRowid } = db
+        .prepare('INSERT INTO alunos (nome, turma_id) VALUES (?, ?)')
+        .run(nome, turmaId);
+      return { id: Number(lastInsertRowid), nome, turma_id: turmaId };
     },
 
     /** Todos os eventos do aluno em ordem cronológica — a entrada do recálculo de P(L). */
@@ -196,8 +217,10 @@ export async function criarRepositorioSqlite(caminho = CAMINHO_PADRAO) {
      * Troca a turma simulada inteira (alunos e eventos) numa transação. Não mexe
      * em nenhum aluno de verdade nem nos alunos de exemplo.
      */
-    async substituirSimulados(turma) {
-      const inserirAluno = db.prepare('INSERT INTO alunos (nome, simulado) VALUES (?, 1)');
+    async substituirSimulados(alunos) {
+      const inserirAluno = db.prepare(
+        'INSERT INTO alunos (nome, simulado, turma_id) VALUES (?, 1, ?)',
+      );
       const inserirEvento = db.prepare(
         `INSERT INTO eventos
            (aluno_id, questao_id, habilidade_id, tipo, resposta_dada, correto,
@@ -207,8 +230,8 @@ export async function criarRepositorioSqlite(caminho = CAMINHO_PADRAO) {
       );
       db.transaction(() => {
         removerSimulados();
-        for (const aluno of turma) {
-          const alunoId = Number(inserirAluno.run(aluno.nome).lastInsertRowid);
+        for (const aluno of alunos) {
+          const alunoId = Number(inserirAluno.run(aluno.nome, aluno.turma_id).lastInsertRowid);
           for (const { id, ...e } of aluno.eventos) {
             inserirEvento.run({ ...e, aluno_id: alunoId, correto: e.correto ? 1 : 0 });
           }
@@ -218,6 +241,24 @@ export async function criarRepositorioSqlite(caminho = CAMINHO_PADRAO) {
 
     async removerSimulados() {
       db.transaction(removerSimulados)();
+    },
+
+    /**
+     * "Limpar informações": volta ao estado inicial. Apaga todas as respostas e todos
+     * os alunos criados depois (inclusive os simulados); ficam os de exemplo, zerados.
+     */
+    async limparTudo() {
+      const exemplo = ALUNOS.map((a) => a.id);
+      db.transaction(() => {
+        db.exec('DELETE FROM eventos');
+        db.prepare(
+          `DELETE FROM alunos WHERE id NOT IN (${exemplo.map(() => '?').join(', ')})`,
+        ).run(...exemplo);
+        db.exec(`
+          DELETE FROM sqlite_sequence WHERE name = 'eventos';
+          UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM alunos) WHERE name = 'alunos';
+        `);
+      })();
     },
 
     async registrarEvento(evento) {

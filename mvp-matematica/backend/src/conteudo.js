@@ -6,13 +6,13 @@
 
 import { createHash } from 'node:crypto';
 
-import { ALUNOS, HABILIDADES, QUESTOES } from './seed-data.js';
+import { ALUNOS, HABILIDADES, QUESTOES, TURMAS } from './seed-data.js';
 
 export { ALUNOS };
 
-/** Hash do seed: muda sempre que alguma habilidade, questão ou aluno de exemplo muda. */
+/** Hash do seed: muda sempre que alguma habilidade, questão, turma ou aluno de exemplo muda. */
 export const VERSAO_CONTEUDO = createHash('sha256')
-  .update(JSON.stringify({ ALUNOS, HABILIDADES, QUESTOES }))
+  .update(JSON.stringify({ ALUNOS, HABILIDADES, QUESTOES, TURMAS }))
   .digest('hex')
   .slice(0, 16);
 
@@ -32,3 +32,8 @@ export const listarHabilidades = () => habilidades;
 export const listarQuestoes = () => questoes;
 
 export const buscarQuestao = (id) => questaoPorId.get(id);
+
+/** Turmas na ordem do seed; a primeira recebe quem se cadastra sem escolher. */
+export const listarTurmas = () => TURMAS;
+
+export const buscarTurma = (id) => TURMAS.find((t) => t.id === id);

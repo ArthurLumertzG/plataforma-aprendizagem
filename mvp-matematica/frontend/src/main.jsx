@@ -14,6 +14,7 @@ import './styles/base.css';
 import './styles/inicio.css';
 import './styles/crianca.css';
 import './styles/professor.css';
+import './styles/relatorio.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

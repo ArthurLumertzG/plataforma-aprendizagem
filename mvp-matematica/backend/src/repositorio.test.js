@@ -25,7 +25,8 @@ for (const { nome, criar } of BANCOS) {
     const repo = await criar();
     assert.deepEqual(await repo.listarAlunos(), ALUNOS);
     const novo = await repo.criarAluno('Bia');
-    assert.deepEqual(novo, { id: ALUNOS.length + 1, nome: 'Bia' });
+    assert.deepEqual(novo, { id: ALUNOS.length + 1, nome: 'Bia', turma_id: 1 });
+    assert.equal((await repo.criarAluno('Rui', 3)).turma_id, 3);
     assert.deepEqual(await repo.buscarAluno(novo.id), novo);
     assert.equal(await repo.buscarAluno(999), undefined);
   });
@@ -69,6 +70,7 @@ for (const { nome, criar } of BANCOS) {
     await repo.registrarEvento(evento(1, q1));
     const simulado = (nomeAluno, criado_em) => ({
       nome: nomeAluno,
+      turma_id: 2,
       eventos: [
         { ...evento(0, q1), criado_em },
         { ...evento(0, q2, { correto: false }), criado_em },
@@ -84,6 +86,7 @@ for (const { nome, criar } of BANCOS) {
     assert.equal(ids.length, 2, 'popular de novo substitui, não acumula');
     const alunos = await repo.listarAlunos();
     assert.equal(alunos.length, ALUNOS.length + 2);
+    assert.equal(alunos.find((a) => a.id === ids[0]).turma_id, 2);
     const eventos = await repo.eventosDoAluno(ids[0]);
     assert.deepEqual(
       eventos.map((e) => [e.questao_id, e.correto, e.criado_em]),
@@ -97,6 +100,22 @@ for (const { nome, criar } of BANCOS) {
     assert.deepEqual(await repo.alunosSimulados(), []);
     assert.deepEqual(await repo.listarAlunos(), ALUNOS);
     assert.equal((await repo.eventosDoAluno(1)).length, 1);
+  });
+
+  test(`${nome}: limpar tudo volta ao estado inicial, com a numeração de volta`, async () => {
+    const repo = await criar();
+    const [q] = QUESTOES;
+    const bia = await repo.criarAluno('Bia');
+    await repo.registrarEvento(evento(1, q));
+    await repo.registrarEvento(evento(bia.id, q));
+    await repo.substituirSimulados([
+      { nome: 'Zeca', turma_id: 2, eventos: [{ ...evento(0, q), criado_em: '2026-10-01 12:00:00' }] },
+    ]);
+
+    await repo.limparTudo();
+    assert.deepEqual(await repo.listarAlunos(), ALUNOS);
+    assert.equal((await repo.eventosPorAluno()).size, 0);
+    assert.equal((await repo.criarAluno('Nova')).id, ALUNOS.length + 1);
   });
 
   test(`${nome}: o banco recusa evento de questão que não existe`, async () => {

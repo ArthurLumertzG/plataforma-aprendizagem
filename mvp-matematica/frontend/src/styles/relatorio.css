@@ -1,0 +1,309 @@
+/* ==========================================================================
+   Relatório de desempenho por turma: o painel somado, para ler com calma e
+   imprimir. Reaproveita o topo e os estados do painel (professor.css).
+   ========================================================================== */
+
+.relatorio__corpo {
+  display: grid;
+  gap: 28px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+}
+
+@media (max-width: 600px) {
+  .relatorio__corpo {
+    padding-inline: 16px;
+  }
+}
+
+.relatorio__turmas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0.45em 1em;
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--tinta);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.aba:hover {
+  border-color: var(--tinta-3);
+}
+
+.aba--ativa {
+  border-color: var(--acao);
+  background: var(--acao);
+  color: #fff;
+}
+
+.aba__contagem {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.08);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.aba--ativa .aba__contagem {
+  background: rgb(255 255 255 / 0.22);
+}
+
+.relatorio__bloco {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 22px 24px;
+  border-radius: var(--raio);
+  background: var(--superficie);
+  box-shadow: var(--sombra-folha);
+}
+
+@media (max-width: 600px) {
+  .relatorio__bloco {
+    padding: 18px 16px;
+  }
+}
+
+.relatorio__bloco h1 {
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.relatorio__bloco h2,
+.relatorio__limites h2 {
+  font-size: 1.15rem;
+}
+
+.relatorio__sub,
+.relatorio__nota {
+  color: var(--tinta-2);
+}
+
+.relatorio__nota {
+  font-size: 0.88rem;
+}
+
+/* ---------- indicadores ---------- */
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.indicador {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-pequeno);
+  background: var(--papel);
+}
+
+.indicador__titulo {
+  color: var(--tinta-2);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.indicador__valor {
+  font-size: 1.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.indicador__detalhe {
+  color: var(--tinta-3);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+/* ---------- tabelas ---------- */
+.relatorio__rolagem {
+  overflow-x: auto;
+}
+
+.relatorio__tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.relatorio__tabela th,
+.relatorio__tabela td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--linha);
+  text-align: left;
+  vertical-align: top;
+}
+
+.relatorio__tabela thead th {
+  color: var(--tinta-2);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.relatorio__tabela tbody th {
+  min-width: 140px;
+}
+
+.relatorio__tabela td {
+  font-variant-numeric: tabular-nums;
+}
+
+.relatorio__linha--atual {
+  background: var(--superficie-2);
+}
+
+.relatorio__tabela .botao--texto {
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.relatorio__numero {
+  display: block;
+  font-weight: 700;
+}
+
+.relatorio__base {
+  display: block;
+  color: var(--tinta-3);
+  font-size: 0.78rem;
+}
+
+.relatorio__vazio {
+  color: var(--tinta-3);
+}
+
+.relatorio__tabela .regua {
+  margin: 4px 0 2px;
+  max-width: 120px;
+}
+
+.barra {
+  display: block;
+  width: 100%;
+  max-width: 120px;
+  height: 6px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+.barra__preenchida {
+  display: block;
+  height: 100%;
+  background: var(--acerto-vivo);
+}
+
+/* ---------- grupos ---------- */
+.grupos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.grupo {
+  padding: 12px 14px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-pequeno);
+}
+
+.grupo__titulo {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.98rem;
+}
+
+.grupo__contagem {
+  color: var(--tinta-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.grupo__nota {
+  color: var(--tinta-3);
+  font-size: 0.8rem;
+}
+
+.grupo__alunos {
+  margin-top: 6px;
+  color: var(--tinta-2);
+  font-size: 0.9rem;
+}
+
+.grupo__aluno--travou {
+  color: var(--atencao);
+  font-weight: 700;
+}
+
+.estado--vazio {
+  color: var(--tinta-3);
+}
+
+/* ---------- limites ---------- */
+.relatorio__limites {
+  padding: 18px 22px;
+  border-left: 3px solid var(--acao);
+  border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0;
+  background: var(--superficie);
+  color: var(--tinta-2);
+  font-size: 0.9rem;
+}
+
+.relatorio__limites ul {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding-left: 1.2em;
+  list-style: disc;
+}
+
+/* ---------- impressão: só o conteúdo, em papel branco ---------- */
+@media print {
+  .so-tela {
+    display: none !important;
+  }
+
+  .relatorio,
+  .relatorio__bloco,
+  .indicador {
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .relatorio__corpo {
+    padding: 0;
+    gap: 16px;
+  }
+
+  .relatorio__bloco {
+    padding: 0;
+    break-inside: avoid-page;
+  }
+
+  .relatorio__rolagem {
+    overflow: visible;
+  }
+
+  .relatorio__tabela {
+    font-size: 0.78rem;
+  }
+}

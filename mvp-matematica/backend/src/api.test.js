@@ -97,10 +97,40 @@ for (const { nome, criar } of BANCOS) {
       const alunos = (await chamar('/alunos')).corpo;
       assert.ok(alunos.length > 0 && alunos.length < painel.alunos.length);
 
+      // Por turma: o filtro do painel e o relatório.
+      const doSegundo = (await chamar('/professor/painel?turma=2', { cabecalhos: professor })).corpo;
+      assert.ok(doSegundo.alunos.length > 0 && doSegundo.alunos.every((a) => a.turma_id === 2));
+      assert.equal(doSegundo.turma_selecionada.id, 2);
+      assert.equal(doSegundo.turmas.reduce((s, t) => s + t.alunos, 0), painel.alunos.length);
+      assert.equal((await chamar('/professor/painel?turma=99', { cabecalhos: professor })).status, 404);
+      const { corpo: rel } = await chamar('/professor/relatorio?turma=3', { cabecalhos: professor });
+      assert.equal(rel.relatorio.turma.id, 3);
+      assert.equal(rel.comparativo.length, 3);
+      assert.equal(rel.relatorio.alunos.length, rel.turmas.find((t) => t.id === 3).alunos);
+      assert.equal((await chamar('/professor/relatorio')).status, 401);
+
       await chamar('/professor/simulacao', { metodo: 'DELETE', cabecalhos: professor });
       const depois = (await chamar('/professor/painel', { cabecalhos: professor })).corpo;
       assert.equal(depois.simulados, 0);
       assert.equal(depois.alunos.length, alunos.length);
+    });
+  });
+
+  test(`${nome}: limpar informações volta ao início`, async () => {
+    await comServidor(await criar(), async (chamar) => {
+      const professor = { 'x-senha-professor': 'professor123' };
+      await chamar('/alunos', { metodo: 'POST', corpo: { nome: 'Bia', turma_id: 2 } });
+      await chamar('/professor/simulacao', { metodo: 'POST', cabecalhos: professor });
+      assert.equal((await chamar('/professor/dados', { metodo: 'DELETE' })).status, 401);
+      assert.equal(
+        (await chamar('/professor/dados', { metodo: 'DELETE', cabecalhos: professor })).status,
+        200,
+      );
+      const painel = (await chamar('/professor/painel', { cabecalhos: professor })).corpo;
+      assert.equal(painel.simulados, 0);
+      assert.ok(painel.alunos.every((a) => a.historico.length === 0));
+      assert.equal(painel.alunos.length, 5, 'só os alunos de exemplo');
+      assert.equal((await chamar('/turmas')).corpo.length, 3);
     });
   });
 
@@ -109,6 +139,10 @@ for (const { nome, criar } of BANCOS) {
       assert.equal((await chamar('/alunos/abc/proxima-questao')).status, 404);
       assert.equal((await chamar('/alunos/999/dominio')).status, 404);
       assert.equal((await chamar('/alunos', { metodo: 'POST', corpo: { nome: '' } })).status, 400);
+      assert.equal(
+        (await chamar('/alunos', { metodo: 'POST', corpo: { nome: 'X', turma_id: 99 } })).status,
+        400,
+      );
       const painel = await chamar('/professor/painel', {
         cabecalhos: { 'x-senha-professor': 'errada' },
       });
