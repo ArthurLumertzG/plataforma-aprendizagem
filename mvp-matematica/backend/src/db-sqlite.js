@@ -38,7 +38,8 @@ function migrar(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS alunos (
       id    INTEGER PRIMARY KEY AUTOINCREMENT,
-      nome  TEXT NOT NULL  -- pseudônimo/apelido, nunca o nome completo
+      nome  TEXT NOT NULL,  -- pseudônimo/apelido, nunca o nome completo
+      simulado INTEGER NOT NULL DEFAULT 0  -- turma simulada da demonstração (simulacao.js)
     );
 
     CREATE TABLE IF NOT EXISTS habilidades (
@@ -77,6 +78,12 @@ function migrar(db) {
       criado_em     TEXT    NOT NULL
     );
   `);
+
+  // Bancos anteriores à turma simulada: a coluna entra sem apagar nada.
+  const colunas = db.prepare('PRAGMA table_info(alunos)').all().map((c) => c.name);
+  if (!colunas.includes('simulado')) {
+    db.exec('ALTER TABLE alunos ADD COLUMN simulado INTEGER NOT NULL DEFAULT 0');
+  }
 }
 
 /** Conteúdo vem do seed: edições em seed-data.js valem no próximo start. */
@@ -139,6 +146,14 @@ export async function criarRepositorioSqlite(caminho = CAMINHO_PADRAO) {
   migrar(db);
   semear(db);
 
+  // A única exceção ao append-only: apagar a turma simulada inteira, nunca um evento solto.
+  const removerSimulados = () => {
+    db.exec(`
+      DELETE FROM eventos WHERE aluno_id IN (SELECT id FROM alunos WHERE simulado = 1);
+      DELETE FROM alunos WHERE simulado = 1;
+    `);
+  };
+
   return {
     banco: 'sqlite',
 
@@ -171,6 +186,38 @@ export async function criarRepositorioSqlite(caminho = CAMINHO_PADRAO) {
         porAluno.get(e.aluno_id).push(comoEvento(e));
       }
       return porAluno;
+    },
+
+    async alunosSimulados() {
+      return db.prepare('SELECT id FROM alunos WHERE simulado = 1 ORDER BY id').pluck().all();
+    },
+
+    /**
+     * Troca a turma simulada inteira (alunos e eventos) numa transação. Não mexe
+     * em nenhum aluno de verdade nem nos alunos de exemplo.
+     */
+    async substituirSimulados(turma) {
+      const inserirAluno = db.prepare('INSERT INTO alunos (nome, simulado) VALUES (?, 1)');
+      const inserirEvento = db.prepare(
+        `INSERT INTO eventos
+           (aluno_id, questao_id, habilidade_id, tipo, resposta_dada, correto,
+            versao_parametros, dificuldade_servida, regra, criado_em)
+         VALUES (@aluno_id, @questao_id, @habilidade_id, @tipo, @resposta_dada, @correto,
+                 @versao_parametros, @dificuldade_servida, @regra, @criado_em)`,
+      );
+      db.transaction(() => {
+        removerSimulados();
+        for (const aluno of turma) {
+          const alunoId = Number(inserirAluno.run(aluno.nome).lastInsertRowid);
+          for (const { id, ...e } of aluno.eventos) {
+            inserirEvento.run({ ...e, aluno_id: alunoId, correto: e.correto ? 1 : 0 });
+          }
+        }
+      })();
+    },
+
+    async removerSimulados() {
+      db.transaction(removerSimulados)();
     },
 
     async registrarEvento(evento) {

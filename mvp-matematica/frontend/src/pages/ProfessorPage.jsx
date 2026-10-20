@@ -137,6 +137,87 @@ function ResumoTurma({ habilidades, turma }) {
   );
 }
 
+function SeloSimulado({ aluno }) {
+  if (!aluno.simulado) return null;
+  return (
+    <span className="selo-simulado" title="Aluno fictício da turma simulada">
+      simulado
+    </span>
+  );
+}
+
+/**
+ * Popular o painel com uma turma fictícia em uso há semanas, para mostrar como ele
+ * fica em produção. Os alunos passam pelo teste rápido, pelo motor e pelo BKT de
+ * verdade; só as respostas são geradas (backend/src/simulacao.js).
+ */
+function TurmaSimulada({ senha, simulados, aoMudar }) {
+  const [ocupado, setOcupado] = useState(null);
+  const [erro, setErro] = useState(null);
+
+  async function executar(acao) {
+    setOcupado(acao);
+    setErro(null);
+    try {
+      await (acao === 'popular' ? api.popularSimulacao(senha) : api.removerSimulacao(senha));
+      aoMudar();
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  return (
+    <div className="simulacao">
+      <p className="simulacao__texto">
+        {simulados === 0 ? (
+          <>
+            <strong>Demonstração:</strong> veja o painel como numa turma em uso real, com 24
+            alunos fictícios e algumas semanas de prática. Cada resposta passa pelo teste rápido,
+            pelo motor e pelo BKT como as de uma criança de verdade.
+          </>
+        ) : (
+          <>
+            <strong>{plural(simulados, 'aluno simulado', 'alunos simulados')}</strong> no painel,
+            marcados como <span className="selo-simulado">simulado</span>. São fictícios: servem
+            para mostrar o painel, não como evidência de que a plataforma funciona.
+          </>
+        )}
+      </p>
+      <div className="simulacao__acoes">
+        <button
+          type="button"
+          className={`botao ${simulados === 0 ? 'botao--principal' : 'botao--leve'}`}
+          onClick={() => executar('popular')}
+          disabled={ocupado !== null}
+        >
+          {ocupado === 'popular'
+            ? 'Gerando a turma…'
+            : simulados === 0
+              ? 'Popular turma simulada'
+              : 'Gerar de novo'}
+        </button>
+        {simulados > 0 && (
+          <button
+            type="button"
+            className="botao botao--leve"
+            onClick={() => executar('remover')}
+            disabled={ocupado !== null}
+          >
+            {ocupado === 'remover' ? 'Removendo…' : 'Remover simulados'}
+          </button>
+        )}
+      </div>
+      {erro && (
+        <p className="mensagem-erro" role="alert">
+          {erro}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ---------- login ----------
 
 function Entrada({ aoEntrar, erro }) {
@@ -330,7 +411,9 @@ function Matriz({ alunos, turma, limiar, acertosParaDominio, selecionado, aoSele
                   >
                     <Avatar aluno={a} />
                     <span>
-                      <span className="matriz__nome">{a.nome}</span>
+                      <span className="matriz__nome">
+                        {a.nome} <SeloSimulado aluno={a} />
+                      </span>
                       {!a.diagnostico.concluido && (
                         <span className="matriz__situacao">
                           Teste rápido {a.diagnostico.respondidos} de {a.diagnostico.total}
@@ -467,6 +550,7 @@ function DetalheAluno({ aluno, recomendacao, janela, acertosParaDominio }) {
       <header className="detalhe__topo">
         <Avatar aluno={aluno} />
         <h2 id="titulo-detalhe">{aluno.nome}</h2>
+        <SeloSimulado aluno={aluno} />
       </header>
 
       <section className="detalhe__bloco">
@@ -557,6 +641,8 @@ export default function ProfessorPage() {
   const [atualizadoEm, setAtualizadoEm] = useState(null);
   const [selecionado, setSelecionado] = useState(null);
   const [recomendacao, setRecomendacao] = useState(null);
+  // Sobe depois de popular ou remover a turma simulada: recarrega sem esperar o polling.
+  const [versaoDados, setVersaoDados] = useState(0);
 
   const autenticado = Boolean(painel);
 
@@ -588,12 +674,14 @@ export default function ProfessorPage() {
       ativo = false;
       clearInterval(timer);
     };
-  }, [senha]);
+  }, [senha, versaoDados]);
 
   // Seleciona o primeiro aluno quando o painel chega.
   useEffect(() => {
     if (painel && !painel.alunos.some((a) => a.id === selecionado)) {
-      setSelecionado(painel.alunos[0]?.id ?? null);
+      // De preferência alguém que já respondeu: um detalhe vazio não mostra nada.
+      const inicial = painel.alunos.find((a) => a.historico.length > 0) ?? painel.alunos[0];
+      setSelecionado(inicial?.id ?? null);
     }
   }, [painel, selecionado]);
 
@@ -667,6 +755,11 @@ export default function ProfessorPage() {
               alunos cadastrados têm dados suficientes para análise (mínimo: {amostra.minimo}{' '}
               respostas de prática, sem contar o teste rápido).
             </p>
+            <TurmaSimulada
+              senha={senha}
+              simulados={painel.simulados ?? 0}
+              aoMudar={() => setVersaoDados((v) => v + 1)}
+            />
           </div>
           <Atencao alunos={painel.alunos} aoVer={setSelecionado} />
           <Matriz

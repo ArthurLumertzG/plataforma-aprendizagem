@@ -35,5 +35,8 @@ export function enunciadoParaAdulto(enunciado) {
 export function horario(criadoEm) {
   const data = new Date(`${criadoEm.replace(' ', 'T')}Z`);
   if (Number.isNaN(data.getTime())) return criadoEm;
-  return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const hora = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // Respostas de outros dias (a turma simulada tem semanas de uso) levam a data.
+  if (data.toDateString() === new Date().toDateString()) return hora;
+  return `${data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, ${hora}`;
 }

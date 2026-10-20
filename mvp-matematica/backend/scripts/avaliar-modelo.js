@@ -3,6 +3,10 @@
 //
 //   npm run avaliar-modelo            relatório legível
 //   npm run avaliar-modelo -- --json  o mesmo relatório em JSON, para guardar
+//   npm run avaliar-modelo -- --incluir-simulados  conta também a turma simulada
+//
+// A turma simulada do painel (simulacao.js) fica de fora por padrão: as respostas
+// dela foram geradas por nós e inflariam a acurácia.
 //
 // Lê o mesmo banco da API: o SQLite local ou, com DATABASE_URL definido, o Postgres
 // (por exemplo, o da Neon em produção). Abrir o banco aplica a migração de esquema,
@@ -19,14 +23,23 @@ const AMOSTRA_PEQUENA = 200;
 const habilidades = listarHabilidades();
 const repo = await obterRepositorio();
 const eventosPorAluno = await repo.eventosPorAluno();
+const simulados = new Set(
+  process.argv.includes('--incluir-simulados') ? [] : await repo.alunosSimulados(),
+);
 const relatorio = avaliarModelo(
-  (await repo.listarAlunos()).map((a) => eventosPorAluno.get(a.id) ?? []),
+  (await repo.listarAlunos())
+    .filter((a) => !simulados.has(a.id))
+    .map((a) => eventosPorAluno.get(a.id) ?? []),
   habilidades,
 );
 
 if (process.argv.includes('--json')) {
   console.log(
-    JSON.stringify({ versao_parametros_atual: VERSAO_PARAMETROS, ...relatorio }, null, 2),
+    JSON.stringify(
+      { versao_parametros_atual: VERSAO_PARAMETROS, simulados_fora: simulados.size, ...relatorio },
+      null,
+      2,
+    ),
   );
   process.exit(0);
 }
@@ -55,7 +68,9 @@ const r = relatorio;
 const saida = [
   `Acurácia do modelo do aluno (BKT, parâmetros ${VERSAO_PARAMETROS})`,
   '',
-  `Alunos: ${r.alunos.cadastrados} cadastrados, ${r.alunos.com_pratica} com prática. Ninguém foi excluído.`,
+  `Alunos: ${r.alunos.cadastrados} cadastrados, ${r.alunos.com_pratica} com prática. Ninguém foi excluído${
+    simulados.size > 0 ? ` (a turma simulada, ${simulados.size} alunos fictícios, não entra)` : ''
+  }.`,
   `Respostas de prática avaliadas: ${r.respostas} (taxa de acerto ${pct(r.taxa_acerto)})`,
   '',
   `AUC: ${aucComIntervalo(r)}`,

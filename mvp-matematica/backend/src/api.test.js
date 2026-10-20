@@ -81,6 +81,29 @@ for (const { nome, criar } of BANCOS) {
     });
   });
 
+  test(`${nome}: turma simulada aparece no painel, mas não na tela da criança`, async () => {
+    await comServidor(await criar(), async (chamar) => {
+      const professor = { 'x-senha-professor': 'professor123' };
+      assert.equal((await chamar('/professor/simulacao', { metodo: 'POST' })).status, 401);
+
+      const criada = await chamar('/professor/simulacao', { metodo: 'POST', cabecalhos: professor });
+      assert.equal(criada.status, 201);
+      assert.ok(criada.corpo.alunos > 10 && criada.corpo.respostas > 500);
+
+      const painel = (await chamar('/professor/painel', { cabecalhos: professor })).corpo;
+      assert.equal(painel.simulados, criada.corpo.alunos);
+      assert.equal(painel.alunos.filter((a) => a.simulado).length, criada.corpo.alunos);
+      assert.ok(painel.alunos.some((a) => a.dominio.some((h) => h.travou)));
+      const alunos = (await chamar('/alunos')).corpo;
+      assert.ok(alunos.length > 0 && alunos.length < painel.alunos.length);
+
+      await chamar('/professor/simulacao', { metodo: 'DELETE', cabecalhos: professor });
+      const depois = (await chamar('/professor/painel', { cabecalhos: professor })).corpo;
+      assert.equal(depois.simulados, 0);
+      assert.equal(depois.alunos.length, alunos.length);
+    });
+  });
+
   test(`${nome}: erros previsíveis voltam como JSON`, async () => {
     await comServidor(await criar(), async (chamar) => {
       assert.equal((await chamar('/alunos/abc/proxima-questao')).status, 404);

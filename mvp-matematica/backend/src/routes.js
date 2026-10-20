@@ -33,6 +33,7 @@ import {
 } from './motor.js';
 import { buscarQuestao, listarHabilidades, listarQuestoes } from './conteudo.js';
 import { obterRepositorio } from './repositorio.js';
+import { simularTurma } from './simulacao.js';
 
 export const SENHA_PROFESSOR = process.env.SENHA_PROFESSOR || 'professor123';
 
@@ -146,7 +147,11 @@ router.get(
 router.get(
   '/alunos',
   rota(async (_req, res) => {
-    res.json(await (await obterRepositorio()).listarAlunos());
+    // A turma simulada só aparece no painel: a tela da criança lista os perfis de verdade.
+    const repo = await obterRepositorio();
+    const [alunos, simulados] = await Promise.all([repo.listarAlunos(), repo.alunosSimulados()]);
+    const ehSimulado = new Set(simulados);
+    res.json(alunos.filter((a) => !ehSimulado.has(a.id)));
   }),
 );
 
@@ -292,22 +297,27 @@ router.post(
   }),
 );
 
-/**
- * Painel do professor: senha única no header (MVP — não é autenticação real).
- * Devolve tudo que a tela precisa em uma chamada só, para o polling ser barato.
- */
+/** Painel do professor: senha única no header (MVP — não é autenticação real). */
+function exigeProfessor(req, res, next) {
+  if (req.get('x-senha-professor') !== SENHA_PROFESSOR) {
+    return res.status(401).json({ erro: 'Senha incorreta' });
+  }
+  next();
+}
+
+/** Devolve tudo que a tela precisa em uma chamada só, para o polling ser barato. */
 router.get(
   '/professor/painel',
-  rota(async (req, res) => {
-    const senha = req.get('x-senha-professor');
-    if (senha !== SENHA_PROFESSOR) return res.status(401).json({ erro: 'Senha incorreta' });
-
+  exigeProfessor,
+  rota(async (_req, res) => {
     // Uma consulta para a turma inteira, não uma por aluno: o painel faz polling.
     const repo = await obterRepositorio();
-    const [lista, eventosPorAluno] = await Promise.all([
+    const [lista, eventosPorAluno, simulados] = await Promise.all([
       repo.listarAlunos(),
       repo.eventosPorAluno(),
+      repo.alunosSimulados(),
     ]);
+    const ehSimulado = new Set(simulados);
     const estados = lista.map((aluno) => ({
       aluno,
       estado: estadoDe(eventosPorAluno.get(aluno.id) ?? []),
@@ -316,6 +326,7 @@ router.get(
       const { proximo, ...diagnostico } = estado.diagnostico;
       return {
         ...aluno,
+        simulado: ehSimulado.has(aluno.id),
         diagnostico,
         dominio: resumoDominio(estado),
         historico: historicoRecente(estado, 10),
@@ -338,6 +349,7 @@ router.get(
     res.json({
       // Todos os cadastrados, com e sem dados suficientes: nunca esconder quem ficou de fora.
       amostra: transparenciaAmostra(estados.map(({ estado }) => estado.eventos)),
+      simulados: simulados.length,
       turma,
       limiar_dominio: LIMIAR_DOMINIO,
       acertos_para_dominio: ACERTOS_PARA_DOMINIO,
@@ -351,5 +363,32 @@ router.get(
       versao_parametros: VERSAO_PARAMETROS,
       alunos,
     });
+  }),
+);
+
+/**
+ * Turma simulada (simulacao.js): alunos fictícios com semanas de uso, para mostrar
+ * o painel como seria em produção. Popular de novo substitui a turma anterior;
+ * alunos de verdade e os de exemplo não são tocados.
+ */
+router.post(
+  '/professor/simulacao',
+  exigeProfessor,
+  rota(async (_req, res) => {
+    const turma = simularTurma({ habilidades: listarHabilidades(), questoes: listarQuestoes() });
+    await (await obterRepositorio()).substituirSimulados(turma);
+    res.status(201).json({
+      alunos: turma.length,
+      respostas: turma.reduce((soma, a) => soma + a.eventos.length, 0),
+    });
+  }),
+);
+
+router.delete(
+  '/professor/simulacao',
+  exigeProfessor,
+  rota(async (_req, res) => {
+    await (await obterRepositorio()).removerSimulados();
+    res.json({ alunos: 0 });
   }),
 );

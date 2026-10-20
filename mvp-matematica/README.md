@@ -264,6 +264,31 @@ por resposta faz repetir o fácil, e a sequência de dias gera ansiedade. Se um 
 houver pontos, eles devem ser proporcionais ao ganho de P(L) da resposta, nunca um
 valor fixo.
 
+## Turma simulada (demonstração de uso real)
+
+No painel do professor, o botão **Popular turma simulada** cria 24 alunos fictícios
+com cerca de quatro semanas de uso (dias úteis, sessões de 8 a 14 questões pela
+manhã), para mostrar o painel como ficaria numa turma em produção: alertas de
+travamento, alunos ainda no teste rápido, revisões espaçadas vencendo, tempo até o
+domínio e retenção da turma. **Gerar de novo** troca a turma inteira e **Remover
+simulados** a apaga. Alunos de verdade e os 5 de exemplo não são tocados.
+
+Os números não são inventados. Cada aluno simulado (`backend/src/simulacao.js`) tem um
+estado verdadeiro escondido (o que sabe de fato, a chance de aprender e de se
+distrair) e percorre o mesmo caminho da API: o item-âncora do teste rápido, depois a
+questão que o motor recomenda, e a resposta passa pelo BKT. O sistema só vê acertos e
+erros, como com uma criança real. Os perfis são adiantado, típico, com dificuldade,
+trava numa habilidade específica, desatento (erra o que sabe), novato e "chegando" (no
+meio do teste rápido). A semente é fixa: a turma é sempre a mesma, só as datas
+acompanham o dia em que se popula.
+
+Limites, para a banca: o comportamento das crianças simuladas foi escrito por nós e se
+parece com o que o BKT supõe, então **não é evidência de eficácia**. Os simulados ficam
+marcados no painel, não aparecem na tela da criança (`GET /api/alunos`) e o
+`npm run avaliar-modelo` os ignora por padrão (`-- --incluir-simulados` para contar).
+Apagar a turma simulada é a única exceção ao append-only, e sempre apaga o aluno
+simulado inteiro, nunca um evento solto.
+
 ## Interface
 
 O conceito visual é o **caderno quadriculado** de matemática, e as quantidades aparecem
@@ -344,14 +369,16 @@ são soma: o parser da interface lê isso como adição e mostraria o apoio erra
 | Método | Rota | Uso |
 |---|---|---|
 | GET | `/api/saude` | `{ ok, banco }`: confirma que a API subiu e qual banco está em uso (`postgres` ou `sqlite`) |
-| GET | `/api/alunos` | Lista os alunos |
+| GET | `/api/alunos` | Lista os alunos (sem a turma simulada) |
 | POST | `/api/alunos` | Body `{ nome }` (apelido, até 30 caracteres); cria um aluno novo |
 | GET | `/api/habilidades` | Grafo de habilidades + pré-requisitos |
 | GET | `/api/alunos/:id/proxima-questao` | Item do teste rápido ou questão recomendada, com a regra que a escolheu |
 | POST | `/api/alunos/:id/respostas` | Body `{ questao_id, resposta_dada }`; registra o evento e devolve o P(L) antes/depois. Durante o teste rápido, responde 409 se a questão não for a atual |
 | GET | `/api/alunos/:id/dominio` | Por habilidade: P(L), P(L0), ganho, domínio confirmado, últimas respostas com o acerto previsto, tempo até o domínio, retenção e alertas. Mais o progresso do teste rápido |
 | GET | `/api/alunos/:id/historico` | Últimas respostas (`?limite=10`), com a regra e a dificuldade de cada uma |
-| GET | `/api/professor/painel` | Tudo que o painel precisa, incluindo `amostra` (`total`, `com_dados`, `minimo`), `turma` (tempo até o domínio e retenção por habilidade) e `versao_parametros`; exige header `x-senha-professor` |
+| GET | `/api/professor/painel` | Tudo que o painel precisa, incluindo `amostra` (`total`, `com_dados`, `minimo`), `turma` (tempo até o domínio e retenção por habilidade), `simulados`, `simulado` em cada aluno e `versao_parametros`; exige header `x-senha-professor` |
+| POST | `/api/professor/simulacao` | Cria ou recria a turma simulada; devolve `{ alunos, respostas }`. Exige `x-senha-professor` |
+| DELETE | `/api/professor/simulacao` | Remove a turma simulada. Exige `x-senha-professor` |
 
 ## Estrutura
 
@@ -364,6 +391,7 @@ mvp-matematica/
 │   │   ├── motor.js       # motor: teste rápido, scaffolding, revisão, zona proximal/progressão, reforço
 │   │   ├── metricas.js    # métricas do painel: domínio confirmado, ganho, divergência, tempo até o domínio, retenção, amostra
 │   │   ├── avaliacao.js   # acurácia do modelo: AUC, Brier, calibração, por habilidade e por regra
+│   │   ├── simulacao.js   # turma simulada do painel: alunos fictícios pelo fluxo real
 │   │   ├── *.test.js      # testes do BKT, de cada regra, das métricas, da avaliação e com alunos sintéticos
 │   │   ├── routes.js      # rotas da API (assíncronas)
 │   │   ├── app.js         # o app Express; a entrada que a Vercel roda

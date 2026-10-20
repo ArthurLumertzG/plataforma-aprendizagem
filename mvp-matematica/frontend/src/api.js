@@ -43,4 +43,17 @@ export const api = {
 
   painelProfessor: (senha) =>
     fetch(url('/api/professor/painel'), { headers: { 'x-senha-professor': senha } }).then(json),
+
+  /** Cria (ou recria) a turma simulada da demonstração. */
+  popularSimulacao: (senha) =>
+    fetch(url('/api/professor/simulacao'), {
+      method: 'POST',
+      headers: { 'x-senha-professor': senha },
+    }).then(json),
+
+  removerSimulacao: (senha) =>
+    fetch(url('/api/professor/simulacao'), {
+      method: 'DELETE',
+      headers: { 'x-senha-professor': senha },
+    }).then(json),
 };

@@ -25,6 +25,7 @@ Existe uma **demo local aprovada** para mostrar a personalização funcionando. 
 - Acurácia do modelo (`backend/src/avaliacao.js` + `npm run avaliar-modelo`): AUC com intervalo, Brier contra referência, calibração, por habilidade e por regra. Roteiro do relatório do piloto em `docs/relatorio-piloto.md`.
 - Interface "Quadriculado" (nome provisório): página institucional, área da criança com material concreto no scaffolding, leitura em voz alta e ajustes de leitura, e painel com matriz aluno × habilidade e mapa de pré-requisitos. Decisões em `mvp-matematica/README.md`, seção "Interface".
 - Testes por regra e com alunos sintéticos (`npm test` em `backend/`).
+- Turma simulada no painel (`backend/src/simulacao.js`, botão "Popular turma simulada"): 24 alunos fictícios com semanas de uso, gerados pelo fluxo real (teste rápido → motor → BKT). Marcados como simulados, fora da tela da criança e do `avaliar-modelo`. Não é evidência de eficácia.
 
 Ela é **deliberadamente mais simples** que a arquitetura-alvo descrita no resto deste arquivo. Não "corrija" essas divergências sem combinar com o grupo:
 

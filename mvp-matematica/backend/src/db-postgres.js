@@ -6,8 +6,11 @@
 import { ALUNOS, HABILIDADES, QUESTOES } from './seed-data.js';
 import { VERSAO_CONTEUDO } from './conteudo.js';
 
-/** Sobe quando o esquema mudar; uma migração nova entra em `migrar`. */
-const VERSAO_ESQUEMA = '1';
+/**
+ * Sobe quando o esquema mudar; a migração entra em ESQUEMA, sempre idempotente.
+ * 2: alunos.simulado (turma simulada da demonstração).
+ */
+const VERSAO_ESQUEMA = '2';
 
 const ESQUEMA = [
   `CREATE TABLE IF NOT EXISTS meta (
@@ -18,6 +21,7 @@ const ESQUEMA = [
      id   SERIAL PRIMARY KEY,
      nome TEXT NOT NULL  -- pseudônimo/apelido, nunca o nome completo
    )`,
+  'ALTER TABLE alunos ADD COLUMN IF NOT EXISTS simulado BOOLEAN NOT NULL DEFAULT false',
   `CREATE TABLE IF NOT EXISTS habilidades (
      id             TEXT PRIMARY KEY,
      nome           TEXT NOT NULL,
@@ -134,6 +138,42 @@ const SELECT_EVENTOS = `
     FROM eventos e
     JOIN questoes q ON q.id = e.questao_id`;
 
+/** Linhas por INSERT de eventos: 10 parâmetros cada, bem abaixo do limite do Postgres. */
+const EVENTOS_POR_INSERT = 400;
+
+const COLUNAS_EVENTO = [
+  'aluno_id',
+  'questao_id',
+  'habilidade_id',
+  'tipo',
+  'resposta_dada',
+  'correto',
+  'versao_parametros',
+  'dificuldade_servida',
+  'regra',
+  'criado_em',
+];
+
+/** Um INSERT com várias linhas: com o driver HTTP, cada consulta é uma ida à rede. */
+function insertDeEventos(eventos) {
+  const params = [];
+  const linhas = eventos.map((e) => {
+    const marcadores = COLUNAS_EVENTO.map((coluna) => {
+      // criado_em chega como "AAAA-MM-DD HH:MM:SS" em UTC, o formato do SELECT.
+      params.push(coluna === 'criado_em' ? `${e.criado_em}+00` : e[coluna]);
+      return `$${params.length}`;
+    });
+    return `(${marcadores.join(', ')})`;
+  });
+  return [`INSERT INTO eventos (${COLUNAS_EVENTO.join(', ')}) VALUES ${linhas.join(', ')}`, params];
+}
+
+// A única exceção ao append-only: apagar a turma simulada inteira, nunca um evento solto.
+const REMOVER_SIMULADOS = [
+  ['DELETE FROM eventos WHERE aluno_id IN (SELECT id FROM alunos WHERE simulado)', []],
+  ['DELETE FROM alunos WHERE simulado', []],
+];
+
 /**
  * @param {{consultar: (sql: string, params?: any[]) => Promise<object[]>,
  *          lote: (comandos: Array<[string, any[]]>) => Promise<void>}} executor
@@ -173,6 +213,38 @@ export async function criarRepositorioPostgres(executor) {
         porAluno.get(e.aluno_id).push(e);
       }
       return porAluno;
+    },
+
+    async alunosSimulados() {
+      const linhas = await executor.consultar('SELECT id FROM alunos WHERE simulado ORDER BY id');
+      return linhas.map((l) => l.id);
+    },
+
+    /**
+     * Troca a turma simulada inteira. Os alunos entram antes (o id vem do banco) e
+     * os eventos numa transação só; se algo falhar no meio, popular de novo resolve.
+     */
+    async substituirSimulados(turma) {
+      await executor.lote(REMOVER_SIMULADOS);
+      if (turma.length === 0) return;
+      const criados = await executor.consultar(
+        'INSERT INTO alunos (nome, simulado) SELECT unnest($1::text[]), true RETURNING id, nome',
+        [turma.map((a) => a.nome)],
+      );
+      // RETURNING não garante a ordem: liga pelo nome, que é único na turma simulada.
+      const idDe = new Map(criados.map((c) => [c.nome, c.id]));
+      const eventos = turma.flatMap((aluno) =>
+        aluno.eventos.map((e) => ({ ...e, aluno_id: idDe.get(aluno.nome) })),
+      );
+      const comandos = [];
+      for (let i = 0; i < eventos.length; i += EVENTOS_POR_INSERT) {
+        comandos.push(insertDeEventos(eventos.slice(i, i + EVENTOS_POR_INSERT)));
+      }
+      if (comandos.length > 0) await executor.lote(comandos);
+    },
+
+    async removerSimulados() {
+      await executor.lote(REMOVER_SIMULADOS);
     },
 
     async registrarEvento(e) {

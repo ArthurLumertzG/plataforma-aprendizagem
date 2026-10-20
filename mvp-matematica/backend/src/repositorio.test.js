@@ -63,6 +63,42 @@ for (const { nome, criar } of BANCOS) {
     assert.equal(porAluno.has(2), false);
   });
 
+  test(`${nome}: a turma simulada entra e sai sem tocar nos outros alunos`, async () => {
+    const repo = await criar();
+    const [q1, q2] = QUESTOES;
+    await repo.registrarEvento(evento(1, q1));
+    const simulado = (nomeAluno, criado_em) => ({
+      nome: nomeAluno,
+      eventos: [
+        { ...evento(0, q1), criado_em },
+        { ...evento(0, q2, { correto: false }), criado_em },
+      ],
+    });
+    await repo.substituirSimulados([simulado('Zeca', '2026-10-01 12:00:00')]);
+    await repo.substituirSimulados([
+      simulado('Zeca', '2026-10-02 12:00:00'),
+      simulado('Lia', '2026-10-02 13:00:00'),
+    ]);
+
+    const ids = await repo.alunosSimulados();
+    assert.equal(ids.length, 2, 'popular de novo substitui, não acumula');
+    const alunos = await repo.listarAlunos();
+    assert.equal(alunos.length, ALUNOS.length + 2);
+    const eventos = await repo.eventosDoAluno(ids[0]);
+    assert.deepEqual(
+      eventos.map((e) => [e.questao_id, e.correto, e.criado_em]),
+      [
+        [q1.id, true, '2026-10-02 12:00:00'],
+        [q2.id, false, '2026-10-02 12:00:00'],
+      ],
+    );
+
+    await repo.removerSimulados();
+    assert.deepEqual(await repo.alunosSimulados(), []);
+    assert.deepEqual(await repo.listarAlunos(), ALUNOS);
+    assert.equal((await repo.eventosDoAluno(1)).length, 1);
+  });
+
   test(`${nome}: o banco recusa evento de questão que não existe`, async () => {
     const repo = await criar();
     await assert.rejects(repo.registrarEvento(evento(1, { ...QUESTOES[0], id: 'nao_existe' })));

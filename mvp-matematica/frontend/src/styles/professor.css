@@ -198,6 +198,54 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Turma simulada: o controle fica junto da amostra, porque muda o que ela conta. */
+.simulacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--quase-vivo);
+  border-radius: var(--raio-pequeno);
+  background: var(--quase-fundo);
+}
+
+.painel__resumo .simulacao__texto {
+  flex: 1 1 320px;
+  margin: 0;
+  color: var(--tinta-2);
+  font-size: 0.92rem;
+}
+
+.simulacao__texto strong {
+  color: var(--tinta);
+}
+
+.simulacao__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.simulacao .mensagem-erro {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.selo-simulado {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--quase-fundo);
+  color: var(--quase);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  vertical-align: middle;
+}
+
 /* ---------- precisa de atenção ---------- */
 .atencao h2,
 .matriz h2 {
