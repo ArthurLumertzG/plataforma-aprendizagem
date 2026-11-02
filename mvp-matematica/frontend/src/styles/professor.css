@@ -68,7 +68,9 @@
   font-weight: 600;
 }
 
-/* ---------- estrutura ---------- */
+/* ---------- estrutura ----------
+   Uma coluna só, de cima para baixo: quem é a turma, os números, o que pede
+   atenção e a matriz com a largura toda. O detalhe do aluno abre numa gaveta. */
 .painel {
   min-height: 100vh;
 }
@@ -81,7 +83,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 20px;
-  padding: 12px max(16px, calc((100% - 1440px) / 2 + 24px));
+  padding: 10px max(16px, calc((100% - 1440px) / 2 + 24px));
   border-bottom: 1px solid var(--linha);
   background: var(--superficie);
 }
@@ -99,7 +101,7 @@
   gap: 8px;
   margin-left: auto;
   color: var(--tinta-2);
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -145,18 +147,11 @@
 
 .painel__corpo {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
-  align-items: start;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 28px max(16px, 24px) 64px;
-}
-
-@media (max-width: 1180px) {
-  .painel__corpo {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  padding: 24px 24px 64px;
 }
 
 @media (max-width: 600px) {
@@ -165,57 +160,178 @@
   }
 }
 
-.painel__principal {
-  display: grid;
-  gap: 24px;
-  min-width: 0;
+.botao--compacto {
+  min-height: 40px;
+  padding: 0.4em 0.95em;
+  font-size: 0.92rem;
 }
 
-.painel__resumo h1 {
+.painel__titulo-secao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+}
+
+.contagem {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6em;
+  padding: 0 0.45em;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  color: var(--tinta-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Título da turma à esquerda, seletor e relatório à direita, na mesma linha. */
+.painel__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.painel__sobretitulo {
+  color: var(--tinta-3);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.painel__cabecalho h1 {
   font-size: clamp(1.6rem, 3vw, 2.1rem);
   line-height: 1.15;
   letter-spacing: -0.02em;
 }
 
-.painel__resumo p {
-  margin-top: 4px;
-  color: var(--tinta-2);
-  font-size: 1.05rem;
+.painel__ferramentas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
-/* Transparência da amostra: sempre visível, nunca escondida atrás de um filtro. */
-.painel__resumo .painel__amostra {
-  margin-top: 10px;
-  padding: 8px 12px;
-  border-left: 3px solid var(--acao);
-  border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0;
+.painel__seletor {
+  display: block;
+  max-width: 100%;
+}
+
+.painel__seletor .campo {
+  width: 280px;
+  max-width: 100%;
+  min-height: 40px;
+  padding-block: 0.3em;
+  font-size: 0.95rem;
+}
+
+/* ---------- números do topo ---------- */
+.numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.numero {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 14px 18px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
   background: var(--superficie);
-  font-size: 0.92rem;
 }
 
-.painel__amostra strong {
-  color: var(--tinta);
+.numero dt {
+  color: var(--tinta-2);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.numero dd {
+  margin: 0;
+}
+
+.numero__valor {
+  font-size: 1.9rem;
+  font-weight: 750;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 
-/* Turma simulada: o controle fica junto da amostra, porque muda o que ela conta. */
+.numero__de {
+  color: var(--tinta-3);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.numero__nota {
+  color: var(--tinta-3);
+  font-size: 0.84rem;
+}
+
+.numero--atencao {
+  border-color: #efcf9f;
+  background: var(--atencao-fundo);
+}
+
+.numero--atencao .numero__valor {
+  color: var(--atencao);
+}
+
+/* Celular: valor à esquerda, rótulo e nota à direita, para os três caberem na tela. */
+@media (max-width: 600px) {
+  .numeros {
+    gap: 8px;
+  }
+
+  .numero {
+    grid-template-columns: 4.6em minmax(0, 1fr);
+    column-gap: 12px;
+    align-items: center;
+    padding: 10px 14px;
+  }
+
+  .numero__valor {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    font-size: 1.6rem;
+  }
+
+  .numero dt,
+  .numero__nota {
+    grid-column: 2;
+  }
+}
+
+/* Transparência da amostra: o mesmo destaque azul de antes, agora como cartão. */
+.numero--amostra {
+  box-shadow: inset 3px 0 0 var(--acao);
+}
+
+/* ---------- demonstração (alunos simulados) ---------- */
 .simulacao {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 16px;
-  margin-top: 10px;
-  padding: 10px 12px;
+  gap: 8px 16px;
+  padding: 8px 8px 8px 14px;
   border: 1px dashed var(--quase-vivo);
-  border-radius: var(--raio-pequeno);
+  border-radius: var(--raio);
   background: var(--quase-fundo);
 }
 
-.painel__resumo .simulacao__texto {
-  flex: 1 1 320px;
+.simulacao__texto {
+  flex: 1 1 360px;
   margin: 0;
   color: var(--tinta-2);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 .simulacao__texto strong {
@@ -225,7 +341,7 @@
 .simulacao__acoes {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .simulacao .mensagem-erro {
@@ -266,43 +382,19 @@
   color: var(--atencao);
 }
 
-/* Seletor de turma e atalho para o relatório, acima do título. */
-.painel__turma {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 10px 12px;
-  margin-bottom: 14px;
-}
-
-.painel__seletor {
-  flex: 0 1 280px;
-  min-width: 0;
-}
-
-.painel__seletor .rotulo {
-  margin-bottom: 4px;
-  font-size: 0.85rem;
-  color: var(--tinta-2);
-}
-
-.painel__seletor .campo {
-  min-height: 44px;
-  padding-block: 0.4em;
-}
-
-/* ---------- precisa de atenção ---------- */
-.atencao h2,
-.matriz h2 {
-  font-size: 1.15rem;
+/* ---------- precisa de atenção: cartões lado a lado ---------- */
+.atencao {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
 }
 
 .atencao__vazio {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
   color: var(--tinta-2);
+  font-size: 0.92rem;
 }
 
 .atencao__vazio .icone {
@@ -312,44 +404,54 @@
 
 .atencao__lista {
   display: grid;
-  gap: 8px;
-  margin-top: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 10px;
+  width: 100%;
 }
 
 .atencao__item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
+  align-content: start;
+  gap: 6px;
   padding: 12px 14px;
   border: 1px solid #efcf9f;
-  border-radius: var(--raio);
+  border-left: 4px solid var(--atencao-vivo);
+  border-radius: var(--raio-pequeno);
   background: var(--atencao-fundo);
 }
 
-.atencao__icone {
+.atencao__tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--atencao);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.atencao__texto {
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.atencao__ver {
+  justify-self: start;
+  min-height: 32px;
+  padding: 0;
+  font-size: 0.9rem;
 }
 
 /* Divergência é "vale observar", não travamento: tom mais calmo que o âmbar. */
 .atencao__item--divergente {
   border-color: #d3cbef;
+  border-left-color: var(--quase-vivo);
   background: var(--quase-fundo);
 }
 
-.atencao__item--divergente .atencao__icone {
+.atencao__item--divergente .atencao__tipo {
   color: var(--quase);
-}
-
-@media (max-width: 600px) {
-  .atencao__item {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .atencao__item .botao {
-    grid-column: 2;
-    justify-self: start;
-  }
 }
 
 /* ---------- matriz aluno × habilidade ---------- */
@@ -361,55 +463,80 @@
 }
 
 .matriz__cabeca {
-  display: grid;
-  gap: 8px;
-  padding: 18px 20px 14px;
-}
-
-.matriz__legenda {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 22px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding: 16px 20px 12px;
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
   color: var(--tinta-2);
-  font-size: 0.86rem;
+  font-size: 0.84rem;
+}
+
+.legenda__linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
 }
 
 .legenda-item {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.legenda .estado {
+  font-size: inherit;
 }
 
 .regua--amostra {
   width: 42px;
 }
 
-.legenda-limiar {
-  width: 2px;
-  height: 16px;
-  background: var(--tinta);
+.legenda__detalhes summary {
+  color: var(--acao);
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.legenda-partida {
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--tinta-2);
-  border-radius: 50%;
+.legenda__detalhes[open] {
+  flex-basis: 100%;
+}
+
+.legenda__detalhes ul {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 4px;
+  padding: 10px 14px 10px 30px;
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie-2);
+  line-height: 1.45;
 }
 
 .matriz__rolagem {
+  /* relative: os textos visualmente ocultos (absolute) das células fora da área
+     visível ficam presos aqui dentro, senão a página toda rola na horizontal. */
+  position: relative;
   overflow-x: auto;
 }
 
 .matriz__tabela {
   width: 100%;
-  min-width: 680px;
+  min-width: 960px;
   border-collapse: collapse;
 }
 
 .matriz__tabela th,
 .matriz__tabela td {
-  padding: 12px 16px;
+  padding: 9px 8px;
   border-top: 1px solid var(--linha);
   text-align: left;
   vertical-align: middle;
@@ -417,14 +544,15 @@
 
 .matriz__tabela thead th {
   color: var(--tinta-2);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.2;
+  vertical-align: bottom;
   background: var(--superficie-2);
 }
 
 .matriz__tabela thead th:first-child {
-  width: 190px;
+  width: 200px;
 }
 
 /* Com muitas habilidades a matriz rola na horizontal; o nome do aluno fica fixo. */
@@ -440,20 +568,19 @@
   background: var(--superficie-2);
 }
 
-.matriz__linha--selecionada th:first-child {
-  background: #eaf1fb;
-}
-
 .matriz__tabela tbody tr {
   cursor: pointer;
 }
 
-.matriz__tabela tbody tr:hover {
+.matriz__tabela tbody tr:hover,
+.matriz__tabela tbody tr:hover th:first-child {
   background: #f6f9fb;
 }
 
 .matriz__linha--selecionada,
-.matriz__tabela tbody tr.matriz__linha--selecionada:hover {
+.matriz__linha--selecionada th:first-child,
+.matriz__tabela tbody tr.matriz__linha--selecionada:hover,
+.matriz__tabela tbody tr.matriz__linha--selecionada:hover th:first-child {
   background: #eaf1fb;
 }
 
@@ -473,38 +600,73 @@
   cursor: pointer;
 }
 
+.matriz__aluno .avatar {
+  width: 30px;
+  height: 30px;
+  font-size: 0.9rem;
+}
+
+.matriz__identidade {
+  min-width: 0;
+}
+
 .matriz__nome {
   display: block;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .matriz__situacao {
   display: block;
-  color: var(--tinta-2);
-  font-size: 0.8rem;
+  color: var(--tinta-3);
+  font-size: 0.76rem;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .matriz__tabela td {
-  min-width: 112px;
+  min-width: 80px;
+}
+
+.matriz__tabela th:first-child {
+  padding-left: 14px;
+}
+
+/* Valor e ganho na mesma linha, a régua embaixo: uma célula, duas linhas. */
+.matriz__topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 5px;
 }
 
 .matriz__valor {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 2px;
+  font-size: 0.92rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.matriz__topo .ganho {
+  font-size: 0.74rem;
+}
+
+.matriz__valor .estado .icone {
+  width: 12px;
+  height: 12px;
 }
 
 .matriz__celula--travou {
   background: rgb(252 239 217 / 0.7);
 }
 
-.matriz__ganho {
-  display: block;
-  margin-top: 6px;
+.matriz__sem-dados {
+  color: var(--tinta-3);
+  font-size: 0.86rem;
+  font-style: italic;
 }
 
 /* ---------- ganho estimado (seta + texto, nunca só cor) ---------- */
@@ -533,34 +695,197 @@
   white-space: normal;
 }
 
-/* ---------- detalhe do aluno ---------- */
-.detalhe {
-  display: grid;
-  gap: 4px;
-  border: 1px solid var(--linha);
-  border-radius: var(--raio-grande);
-  background: var(--superficie);
+/* Rodapé da matriz: tempo até dominar e retenção da turma */
+.matriz__tabela tfoot th,
+.matriz__tabela tfoot td {
+  background: var(--superficie-2);
+  vertical-align: top;
 }
 
-.detalhe__topo {
+.matriz__tabela tfoot tr:first-child th,
+.matriz__tabela tfoot tr:first-child td {
+  border-top: 2px solid var(--linha);
+}
+
+.matriz__tabela tfoot th {
+  font-size: 0.84rem;
+}
+
+.resumo-turma__valor {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.resumo-turma__base,
+.resumo-turma__vazio {
+  display: block;
+  color: var(--tinta-3);
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+/* ---------- gaveta do aluno ---------- */
+body:has(.gaveta[open]) {
+  overflow: hidden;
+}
+
+.gaveta {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(100%, 780px);
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--linha);
+  background: var(--superficie);
+  color: var(--tinta);
+  box-shadow: -24px 0 48px -24px rgb(29 42 68 / 0.35);
+}
+
+.gaveta[open] {
+  animation: gaveta-entra 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.gaveta::backdrop {
+  background: rgb(29 42 68 / 0.35);
+}
+
+@keyframes gaveta-entra {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gaveta[open] {
+    animation: none;
+  }
+}
+
+.gaveta__conteudo {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.gaveta__topo {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 20px 6px;
+  padding: 16px 16px 10px 24px;
 }
 
-.detalhe__topo h2 {
+.gaveta__identidade {
+  flex: 1;
+  min-width: 0;
+}
+
+.gaveta__topo h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   font-size: 1.4rem;
+  line-height: 1.2;
+}
+
+.gaveta__turma {
+  color: var(--tinta-3);
+  font-size: 0.86rem;
+}
+
+.resumo-aluno {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0 24px 14px;
+  list-style: none;
+}
+
+.resumo-aluno li {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  color: var(--tinta-2);
+  font-size: 0.84rem;
+}
+
+.resumo-aluno strong {
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+
+.resumo-aluno .resumo-aluno__atencao {
+  background: var(--atencao-fundo);
+  color: var(--atencao);
+}
+
+.resumo-aluno .resumo-aluno__atencao strong {
+  color: var(--atencao);
+}
+
+.abas {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--linha);
+  overflow-x: auto;
+}
+
+.abas__aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--tinta-2);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.abas__aba:hover {
+  color: var(--tinta);
+}
+
+.abas__aba[aria-selected='true'] {
+  border-bottom-color: var(--acao);
+  color: var(--acao-escura);
+}
+
+.gaveta__corpo {
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  padding: 20px 24px 32px;
+  overflow-y: auto;
+}
+
+@media (max-width: 600px) {
+  .gaveta__topo {
+    padding-left: 16px;
+  }
+
+  .resumo-aluno,
+  .gaveta__corpo {
+    padding-inline: 16px;
+  }
 }
 
 .detalhe__bloco {
   display: grid;
   gap: 8px;
-  padding: 14px 20px 18px;
-}
-
-.detalhe__bloco + .detalhe__bloco {
-  border-top: 1px solid var(--linha);
 }
 
 .detalhe__bloco h3 {
@@ -574,14 +899,23 @@
 
 .recomendacao {
   display: grid;
-  gap: 6px;
-  padding: 14px 16px;
+  gap: 4px;
+  padding: 16px 18px;
   border-radius: var(--raio);
   background: #eaf1fb;
 }
 
+.recomendacao__rotulo {
+  color: var(--tinta-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .recomendacao__regra {
   color: var(--acao-escura);
+  font-size: 1.08rem;
   font-weight: 750;
 }
 
@@ -595,6 +929,7 @@
 }
 
 .recomendacao__enunciado {
+  margin-top: 6px;
   padding-top: 8px;
   border-top: 1px solid rgb(47 102 171 / 0.2);
   font-family: var(--fonte-crianca);
@@ -602,20 +937,21 @@
 }
 
 .detalhe__rolagem {
+  position: relative;
   overflow-x: auto;
 }
 
 /* Domínio, ganho e acertos recentes lado a lado */
 .lado-a-lado {
   width: 100%;
-  min-width: 340px;
+  min-width: 520px;
   border-collapse: collapse;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
 }
 
 .lado-a-lado th,
 .lado-a-lado td {
-  padding: 8px 6px;
+  padding: 10px 8px;
   border-top: 1px solid var(--linha);
   text-align: left;
   vertical-align: top;
@@ -630,6 +966,24 @@
 }
 
 .lado-a-lado tbody th {
+  width: 46%;
+  font-weight: 400;
+}
+
+.lado-a-lado td:nth-child(2) {
+  width: 18%;
+}
+
+.lado-a-lado td:nth-child(2) .regua {
+  margin-top: 6px;
+}
+
+.lado-a-lado__linha--travou {
+  background: rgb(252 239 217 / 0.6);
+}
+
+.lado-a-lado__nome {
+  display: block;
   font-weight: 700;
   line-height: 1.25;
 }
@@ -637,10 +991,11 @@
 .lado-a-lado .estado {
   display: flex;
   margin-top: 3px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
 }
 
 .lado-a-lado__numero {
+  display: block;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -658,34 +1013,9 @@
 
 .lado-a-lado__extra {
   display: block;
-  margin-top: 2px;
+  margin-top: 3px;
   color: var(--tinta-3);
-  font-size: 0.76rem;
-  font-weight: 400;
-}
-
-/* Rodapé da matriz: tempo até dominar e retenção da turma */
-.matriz__tabela tfoot th,
-.matriz__tabela tfoot td {
-  background: var(--superficie-2);
-  vertical-align: top;
-}
-
-.matriz__tabela tfoot th {
-  font-size: 0.86rem;
-}
-
-.resumo-turma__valor {
-  display: block;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.resumo-turma__base,
-.resumo-turma__vazio {
-  display: block;
-  color: var(--tinta-3);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
 
 .detalhe__mapa {
@@ -770,9 +1100,12 @@
   background: var(--ficha-azul);
 }
 
-/* Histórico */
+/* Histórico: com a gaveta larga, cabe em linhas de tabela. */
 .historico {
   display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .historico__item {
@@ -781,7 +1114,7 @@
   grid-template-areas:
     'resultado enunciado variacao'
     'resultado meta variacao';
-  gap: 0 10px;
+  gap: 2px 12px;
   padding: 10px 0;
   border-top: 1px solid var(--linha);
 }
@@ -824,7 +1157,8 @@
   grid-area: variacao;
   align-self: start;
   color: var(--tinta-2);
-  font-size: 0.82rem;
+  font-size: 0.84rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

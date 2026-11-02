@@ -361,14 +361,27 @@ provisório e fica numa constante só (`MARCA`, em `frontend/src/lib/textos.js`)
 - **"Bastidores"** (recolhido) mostra a regra, o P(L) e o motivo de cada questão, para
   a apresentação.
 
-**Painel do professor**: quantos alunos têm dados para análise, alertas de travamento e
-de divergência no topo, matriz aluno × habilidade (P(L), limiar, ponto de partida do
-teste rápido, estado e ganho) com um rodapé da turma (tempo até dominar e retenção)
-e, para o aluno selecionado, a próxima recomendação com a
-regra e o motivo, a tabela "habilidade por habilidade" (domínio, ganho e últimas 10 lado
-a lado), o mapa de pré-requisitos com o P(L) em cada nó e as últimas respostas. A
-recomendação vem de `GET /proxima-questao`, que não grava nada. A matriz fica na ordem
-de cadastro, nunca ordenada por desempenho.
+**Painel do professor**: uma coluna só, de cima para baixo. No topo, o nome da turma com
+o seletor e o relatório na mesma linha, e três números: alunos (quantos ainda estão no
+teste rápido), quantos precisam de atenção e quantos têm dados para análise (a
+transparência da amostra fica num cartão, sempre visível). Depois, uma faixa curta com
+os controles da turma simulada, os alertas de travamento e de divergência em cartões
+lado a lado (os 6 primeiros, com "mostrar mais") e a matriz aluno × habilidade com a
+largura toda (P(L), limiar, ponto de partida do teste rápido, estado e ganho, este em
+pontos e sem o "pts" para caber) e um rodapé da turma (tempo até dominar e retenção). A
+legenda é uma linha só, e as definições completas ficam em "Como ler". Aluno que ainda
+não começou o teste rápido ocupa uma linha só com esse aviso, em vez de 11 células com
+o valor padrão do modelo.
+
+Clicar num aluno (ou em "Ver …" num alerta) abre uma **gaveta lateral** (`<dialog>`
+modal: Esc ou clique fora fecha e o foco volta para quem abriu), que continua ao vivo
+com o polling. Ela traz um resumo (dominadas, a confirmar, travadas) e três abas: visão
+geral (próxima recomendação com a regra e o motivo, e o mapa de pré-requisitos com o
+P(L) em cada nó), habilidade por habilidade (domínio, ganho e últimas 10 lado a lado) e
+últimas respostas. Antes o detalhe era uma coluna fixa ao lado da matriz: espremia a
+matriz e empilhava tudo numa coluna estreita e muito comprida. A recomendação vem de
+`GET /proxima-questao`, que não grava nada. A matriz fica na ordem de cadastro, nunca
+ordenada por desempenho.
 
 **Fontes auto-hospedadas** (`@fontsource`, sem Google Fonts): nenhum acesso de criança
 passa por terceiros, e o app fica mais perto do offline-first. Andika (SIL, feita para
